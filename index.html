@@ -41,6 +41,8 @@
         button:hover { background-color: #0277bd; }
         button.secondary { background-color: #fff; color: #333; border: 1px solid #ccc; }
         button.highlight { border: 2px solid #0288d1; color: #0288d1; font-weight: bold; }
+        button.add-btn { background-color: #2e7d32; }
+        button.add-btn:hover { background-color: #1b5e20; }
 
         #fileInput, #linkColorInput { display: none; }
 
@@ -83,7 +85,7 @@
         }
 
         /* Visual Feedback */
-        .gantt_task_scale { cursor: ew-resize !important; } /* Shows user this is time-zoom only */
+        .gantt_task_scale { cursor: ew-resize !important; } 
         .gantt_task_content { cursor: grab; }
 
         .weekend { background: #f4f7f4; }
@@ -98,11 +100,11 @@
             width: 100%; height: 25px; border: 1px solid #ccc; cursor: pointer; background: none;
         }
 
-        /* --- CURRENT DAY MARKER CSS (UPDATED) --- */
+        /* --- CURRENT DAY MARKER CSS --- */
         .today {
-            background: none; /* No solid fill */
-            border-left: 2px dotted #ff5252; /* Dotted line */
-            width: 0 !important; /* Ensure it is just a line */
+            background: none; 
+            border-left: 2px dotted #ff5252; 
+            width: 0 !important; 
         }
 
         #linkEditorModal {
@@ -176,7 +178,10 @@
             return "<div class='color-picker-container'><input type='color'></div>";
         },
         set_value: function (node, value, task) {
-            node.querySelector("input").value = value || (task.type == "milestone" ? "#e91e63" : "#3db9d3");
+            let defaultColor = "#3db9d3";
+            if (task.type === "milestone") defaultColor = "#e91e63";
+            if (task.type === "project") defaultColor = "#4caf50";
+            node.querySelector("input").value = value || defaultColor;
         },
         get_value: function (node, task) { return node.querySelector("input").value; },
         focus: function (node) { node.querySelector("input").focus(); }
@@ -194,27 +199,42 @@
 
     gantt.config.columns = [
         { name: "text", label: searchHeaderHTML, tree: true, width: 250, min_width: 150, resize: true },
-        {name: "start_date", label: "Start", align: "center", width: 90, resize: true},
-        {name: "duration", label: "Days", align: "center", width: 50},
-        {name: "add", width: 44}
+        { name: "start_date", label: "Start", align: "center", width: 90, resize: true},
+        { name: "duration", label: "Days", align: "center", width: 50},
+        { name: "add", width: 44} // The add column native button
     ];
 
+    // --- LIGHTBOX SECTIONS ---
+    // Added 'typeselect' to allow choosing between Task, Project, and Milestone
+    gantt.locale.labels.section_type = "Element Type";
+    gantt.locale.labels.section_task_color = "Item Color";
+    gantt.locale.labels.section_text_color = "Label Color";
+
+    // Standard Tasks
     gantt.config.lightbox.sections = [
+        {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
         {name: "task_color", height: 30, map_to: "color", type: "color_picker"},
         {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"},
         {name: "time", height: 72, type: "duration", map_to: "auto"}
     ];
 
+    // Projects (Groups of Tasks - Time is auto-calculated from children)
+    gantt.config.lightbox.project_sections = [
+        {name: "type", type: "typeselect", map_to: "type"},
+        {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
+        {name: "task_color", height: 30, map_to: "color", type: "color_picker"},
+        {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"}
+    ];
+
+    // Milestones (Single Date Elements)
     gantt.config.lightbox.milestone_sections = [
+        {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
         {name: "task_color", height: 30, map_to: "color", type: "color_picker"}, 
         {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"},
         {name: "time", height: 72, type: "duration", map_to: "auto", single_date: true} 
     ];
-
-    gantt.locale.labels.section_task_color = "Item Color";
-    gantt.locale.labels.section_text_color = "Label Color";
 
     gantt.config.date_format = "%Y-%m-%d %H:%i";
     gantt.config.xml_date = "%Y-%m-%d %H:%i";
@@ -231,7 +251,6 @@
     gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
 
     // --- 3. CUSTOM ZOOM LEVELS ---
-    
     const zoomLevels = [
         { name: "year", scale_height: 60, row_height: 25, min_column_width: 30, scales: [{unit: "year", step: 1, format: "%Y"}]},
         { name: "quarter", scale_height: 60, row_height: 30, min_column_width: 90, scales: [{unit: "year", step: 1, format: "%Y"}, {unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1)}]},
@@ -259,11 +278,10 @@
         gantt.addMarker({
             start_date: new Date(),
             css: "today",
-            title: "Today: " + date_to_str(new Date()) // Tooltip only, no text on line
+            title: "Today: " + date_to_str(new Date()) 
         });
     }
 
-    // Call once on init
     reinitTodayMarker();
 
     // --- 4. DATA LOGIC ---
@@ -282,12 +300,21 @@
         const links = [];
         let linkIdCounter = 1;
 
-       function recurse(items, parentId) {
+        function recurse(items, parentId) {
             if(!items) return;
             items.forEach(item => {
                 const currentId = item.TaskID || item.id;
-                const isMilestone = item.Duration === 0;
-                let finalColor = isMilestone ? "#e91e63" : "#3db9d3";
+                
+                // Allow explicit types (project, milestone, task). Fallback to Duration check for backwards compatibility
+                let elemType = item.type;
+                if (!elemType) {
+                    elemType = (item.Duration === 0 || item.duration === 0) ? "milestone" : "task";
+                }
+
+                let finalColor = "#3db9d3"; // Default Task
+                if (elemType === "milestone") finalColor = "#e91e63";
+                if (elemType === "project") finalColor = "#4caf50";
+
                 if(item.color) {
                     if(item.color.startsWith("#")) finalColor = item.color;
                     else if(item.color.length >= 3) finalColor = "#" + item.color;
@@ -295,13 +322,13 @@
 
                 tasks.push({
                     id: currentId,
-                    text: item.TaskName || item.text,
-                    start_date: new Date(item.StartDate || item.start_date),
+                    text: item.TaskName || item.text || "New Element",
+                    start_date: item.StartDate || item.start_date ? new Date(item.StartDate || item.start_date) : new Date(),
                     duration: item.Duration || item.duration || 0,
                     parent: parentId || 0,
-                    open: true,
+                    open: item.open !== undefined ? item.open : true,
                     progress: (item.Progress || item.progress || 0) / 100,
-                    type: isMilestone ? "milestone" : "task",
+                    type: elemType,
                     color: finalColor,
                     textColor: item.textColor || "#ffffff"
                 });
@@ -422,7 +449,6 @@
 
     // --- FILE IO ---
     window.addEventListener('load', () => {
-        // Warning: Local File (file://) access will likely fail due to CORS
         fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
             if(data) gantt.parse(processGanttData(data));
         }).catch((e) => { console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); });
@@ -432,14 +458,12 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
             try {
-                gantt.clearAll(); // This wipes markers
+                gantt.clearAll(); 
                 document.getElementById('dynamic-link-styles').innerText = "";
                 const searchEl = document.querySelector('.search-header-input');
                 if(searchEl) searchEl.value = "";
                 
-                // Re-add marker immediately after clearing
                 reinitTodayMarker(); 
-                
                 gantt.parse(processGanttData(JSON.parse(ev.target.result)));
             } catch (err) { alert("Error parsing JSON"); }
         };
@@ -454,16 +478,14 @@
         a.click();
     }
 
-    // --- 7. MANUAL ZOOM CONTROL (GEOMETRY BASED - ROBUST FOR FIREFOX) ---
+    // --- 7. MANUAL ZOOM CONTROL ---
     const container = document.getElementById("gantt_here");
     let lastZoomTime = 0;
 
     container.addEventListener('wheel', function(event) {
-        // 1. Basic Element Detection
         const isTimelineContainer = event.target.closest(".gantt_task");
         const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale");
 
-        // Only act if inside the timeline container and NOT in the left grid
         if (isTimelineContainer && !isGrid) {
             event.preventDefault();
             event.stopPropagation();
@@ -472,25 +494,20 @@
             if (now - lastZoomTime < 60) return false; 
             lastZoomTime = now;
 
-            // 2. Geometry Calculation (Robust way to detect Header)
             const taskRect = gantt.$task.getBoundingClientRect();
-            const offsetY = event.clientY - taskRect.top; // Mouse Y relative to container top
+            const offsetY = event.clientY - taskRect.top; 
             
-            // If mouseY is within the scale height, we are in the Header.
-            const headerHeight = gantt.config.scale_height || 60; // Default or configured
+            const headerHeight = gantt.config.scale_height || 60; 
             const isHeader = offsetY < headerHeight;
 
-            // 3. Prepare Zoom Logic
             const offsetX = event.clientX - taskRect.left;
             const state = gantt.getScrollState();
             const absoluteX = state.x + offsetX;
             const absoluteY = state.y + offsetY;
             
             const cursorDate = gantt.dateFromPos(absoluteX);
-            // Calculate Row Index using current activeRowHeight (more stable than config)
             const cursorRowIndex = absoluteY / activeRowHeight;
 
-            // 4. Calculate Next Index
             let nextIndex = currentZoomIndex;
             if (event.deltaY < 0) { nextIndex++; } else { nextIndex--; }
 
@@ -502,35 +519,28 @@
             const nextLevel = zoomLevels[nextIndex];
             currentZoomIndex = nextIndex;
 
-            // 5. Apply Config based on Location (Header vs Body)
-            // Always update time scales
             gantt.config.scales = nextLevel.scales;
             gantt.config.min_column_width = nextLevel.min_column_width;
             
             if (isHeader) {
-                // IN HEADER: Force row_height to stay as it currently is
                 gantt.config.row_height = activeRowHeight;
             } else {
-                // IN BODY: Update height and save it as the new active height
                 activeRowHeight = nextLevel.row_height;
                 gantt.config.row_height = activeRowHeight;
             }
 
             gantt.render();
 
-            // 6. Restore Scroll Position
             const newAbsoluteX = gantt.posFromDate(cursorDate);
             const newScrollLeft = newAbsoluteX - offsetX;
             
             let newScrollTop;
             
             if (!isHeader) {
-                // If we changed height, recalculate Y position
                 const newRowHeight = gantt.config.row_height;
                 const newAbsoluteY = cursorRowIndex * newRowHeight;
                 newScrollTop = newAbsoluteY - offsetY;
             } else {
-                // Header zoom: Keep Y scroll exactly where it was
                 newScrollTop = state.y;
             }
 
