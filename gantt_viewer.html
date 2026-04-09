@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt - Firefox Local Fix</title>
+    
+    <!-- DHTMLX Gantt Library -->
+    <script src="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            font-family: 'Roboto', sans-serif; overflow: hidden; 
+        }
+
+        .controls {
+            height: 60px; background: #f4f5f7; border-bottom: 1px solid #cecece;
+            padding: 0 20px; display: flex; align-items: center; justify-content: space-between;
+            box-sizing: border-box; z-index: 10; position: relative;
+        }
+
+        .controls h2 { margin: 0; font-size: 1.2rem; color: #333; }
+        .toolbar-right { display: flex; gap: 10px; align-items: center; }
+
+        .instruction { 
+            color: #666; font-size: 0.85rem; 
+            background: #e1e4e8; padding: 5px 12px; 
+            border-radius: 15px; margin-right: 15px;
+        }
+
+        button {
+            background-color: #0288d1; color: white; border: none;
+            padding: 8px 16px; border-radius: 4px; cursor: pointer;
+            font-size: 0.9rem; transition: background 0.2s;
+        }
+        button:hover { background-color: #0277bd; }
+        button.secondary { background-color: #fff; color: #333; border: 1px solid #ccc; }
+        button.highlight { border: 2px solid #0288d1; color: #0288d1; font-weight: bold; }
+
+        #fileInput, #linkColorInput { display: none; }
+
+        /* --- SEARCH FIELD CSS --- */
+        .gantt_grid_scale .gantt_grid_head_cell {
+            white-space: normal !important;
+            line-height: normal !important;
+            vertical-align: middle;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-header-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .search-header-input {
+            width: 90%;
+            padding: 4px 8px;
+            box-sizing: border-box;
+            margin-top: 5px;
+            font-size: 12px;
+            border-radius: 15px;
+            border: 1px solid #ccc;
+            font-weight: normal; 
+            outline: none;
+        }
+        .search-header-input:focus {
+            border-color: #0288d1;
+        }
+
+        #gantt_here {
+            width: 100%; height: calc(100vh - 60px); 
+            background: white; position: relative;
+        }
+
+        /* Visual Feedback */
+        .gantt_task_scale { cursor: ew-resize !important; } /* Shows user this is time-zoom only */
+        .gantt_task_content { cursor: grab; }
+
+        .weekend { background: #f4f7f4; }
+        .gantt_drag_move { cursor: grabbing !important; }
+        .gantt_task_line { border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+        .gantt_task_progress { background-color: rgba(0,0,0,0.2); }
+
+        .color-picker-container {
+            display: flex; align-items: center; padding: 5px 10px; height: 30px;
+        }
+        .color-picker-container input {
+            width: 100%; height: 25px; border: 1px solid #ccc; cursor: pointer; background: none;
+        }
+
+        /* --- CURRENT DAY MARKER CSS (UPDATED) --- */
+        .today {
+            background: none; /* No solid fill */
+            border-left: 2px dotted #ff5252; /* Dotted line */
+            width: 0 !important; /* Ensure it is just a line */
+        }
+
+        #linkEditorModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+        }
+        #linkEditorModal.show { display: flex; }
+        .link-editor-content {
+            background: white; padding: 20px; border-radius: 8px; width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .link-editor-content h3 { margin: 0 0 15px 0; color: #333; }
+        .link-editor-row { margin-bottom: 15px; }
+        .link-editor-row label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .link-editor-row input, .link-editor-row select {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .link-editor-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .link-editor-buttons button { flex: 1; }
+        .btn-delete { background: #d32f2f !important; }
+    </style>
+    <style id="dynamic-link-styles"></style>
+</head>
+<body>
+
+<div class="controls">
+    <h2>Project Roadmap</h2>
+    <div class="toolbar-right">
+        <div class="instruction">
+            Header Wheel: ↔️ Time only | Body Wheel: ↔️ Time + ↕️ Height
+        </div>
+        <input type="file" id="fileInput" accept=".json">
+        <input type="color" id="linkColorInput"> 
+        <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
+        <button onclick="saveData()">💾 Save Changes</button>
+    </div>
+</div>
+
+<div id="gantt_here"></div>
+
+<!-- Link Editor Modal -->
+<div id="linkEditorModal">
+    <div class="link-editor-content">
+        <h3>Edit Dependency</h3>
+        <div class="link-editor-row">
+            <label>Line Color:</label>
+            <input type="color" id="linkEditorColor">
+        </div>
+        <div class="link-editor-row">
+            <label>Type:</label>
+            <select id="linkEditorType">
+                <option value="0">Finish to Start</option>
+                <option value="1">Start to Start</option>
+                <option value="2">Finish to Finish</option>
+                <option value="3">Start to Finish</option>
+            </select>
+        </div>
+        <div class="link-editor-buttons">
+            <button onclick="saveLinkEdit()">💾 Save</button>
+            <button class="btn-delete" onclick="deleteLinkEdit()">🗑️ Delete</button>
+            <button class="secondary" onclick="closeLinkEditor()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. CUSTOM COLOR PICKER ---
+    gantt.form_blocks["color_picker"] = {
+        render: function (sns) {
+            return "<div class='color-picker-container'><input type='color'></div>";
+        },
+        set_value: function (node, value, task) {
+            node.querySelector("input").value = value || (task.type == "milestone" ? "#e91e63" : "#3db9d3");
+        },
+        get_value: function (node, task) { return node.querySelector("input").value; },
+        focus: function (node) { node.querySelector("input").focus(); }
+    };
+
+    // --- 2. CONFIGURATION ---
+    gantt.config.order_branch = true;
+    gantt.config.order_branch_free = true;
+
+    const searchHeaderHTML = `
+        <div class='search-header-wrapper'>
+            Task Name
+            <input type='text' class='search-header-input' placeholder='🔍 Search...' oninput='applyFilter(this.value)' onclick='event.stopPropagation()' onmousedown='event.stopPropagation()'>
+        </div>`;
+
+    gantt.config.columns = [
+        { name: "text", label: searchHeaderHTML, tree: true, width: 250, min_width: 150, resize: true },
+        {name: "start_date", label: "Start", align: "center", width: 90, resize: true},
+        {name: "duration", label: "Days", align: "center", width: 50},
+        {name: "add", width: 44}
+    ];
+
+    gantt.config.lightbox.sections = [
+        {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
+        {name: "task_color", height: 30, map_to: "color", type: "color_picker"},
+        {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"},
+        {name: "time", height: 72, type: "duration", map_to: "auto"}
+    ];
+
+    gantt.config.lightbox.milestone_sections = [
+        {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
+        {name: "task_color", height: 30, map_to: "color", type: "color_picker"}, 
+        {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"},
+        {name: "time", height: 72, type: "duration", map_to: "auto", single_date: true} 
+    ];
+
+    gantt.locale.labels.section_task_color = "Item Color";
+    gantt.locale.labels.section_text_color = "Label Color";
+
+    gantt.config.date_format = "%Y-%m-%d %H:%i";
+    gantt.config.xml_date = "%Y-%m-%d %H:%i";
+    gantt.templates.timeline_cell_class = (task, date) => (date.getDay()==0||date.getDay()==6) ? "weekend" : "";
+    gantt.templates.link_class = (link) => "link_id_" + link.id;
+
+    // --- ENABLE MARKER PLUGIN ---
+    gantt.plugins({ 
+        tooltip: true, 
+        drag_timeline: true, 
+        marker: true 
+    });
+
+    gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
+
+    // --- 3. CUSTOM ZOOM LEVELS ---
+    
+    const zoomLevels = [
+        { name: "year", scale_height: 60, row_height: 25, min_column_width: 30, scales: [{unit: "year", step: 1, format: "%Y"}]},
+        { name: "quarter", scale_height: 60, row_height: 30, min_column_width: 90, scales: [{unit: "year", step: 1, format: "%Y"}, {unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1)}]},
+        { name: "month", scale_height: 60, row_height: 35, min_column_width: 120, scales: [{unit: "month", format: "%F, %Y"}, {unit: "week", format: "Week %W"}]},
+        { name: "week", scale_height: 60, row_height: 45, min_column_width: 50, scales: [{unit: "month", format: "%M %Y"}, {unit: "day", step: 1, format: "%d %D"}]},
+        { name: "day", scale_height: 60, row_height: 60, min_column_width: 80, scales: [{unit: "month", format: "%M %Y"}, {unit: "day", step: 1, format: "%d %M"}]}
+    ];
+
+    let currentZoomIndex = 2; // Start at 'month'
+    let activeRowHeight = zoomLevels[currentZoomIndex].row_height; 
+
+    function initManualZoom() {
+        const level = zoomLevels[currentZoomIndex];
+        gantt.config.scales = level.scales;
+        gantt.config.min_column_width = level.min_column_width;
+        gantt.config.scale_height = level.scale_height;
+        gantt.config.row_height = activeRowHeight;
+        gantt.init("gantt_here");
+    }
+    initManualZoom();
+
+    // --- MARKER HELPER FUNCTION ---
+    function reinitTodayMarker() {
+        const date_to_str = gantt.date.date_to_str(gantt.config.task_date);
+        gantt.addMarker({
+            start_date: new Date(),
+            css: "today",
+            title: "Today: " + date_to_str(new Date()) // Tooltip only, no text on line
+        });
+    }
+
+    // Call once on init
+    reinitTodayMarker();
+
+    // --- 4. DATA LOGIC ---
+    window.applyFilter = function(query) {
+        gantt.refreshData();
+        setTimeout(scrollToFirstVisible, 40);
+    };
+
+    function processGanttData(jsonData) {
+        if(jsonData.data && jsonData.data.length > 0 && !jsonData.data[0].subtasks && jsonData.data[0].id) {
+            if(jsonData.links) jsonData.links.forEach(l => { if(l.color) injectLinkColorStyle(l.id, l.color); });
+            return jsonData;
+        }
+
+        const tasks = [];
+        const links = [];
+        let linkIdCounter = 1;
+
+       function recurse(items, parentId) {
+            if(!items) return;
+            items.forEach(item => {
+                const currentId = item.TaskID || item.id;
+                const isMilestone = item.Duration === 0;
+                let finalColor = isMilestone ? "#e91e63" : "#3db9d3";
+                if(item.color) {
+                    if(item.color.startsWith("#")) finalColor = item.color;
+                    else if(item.color.length >= 3) finalColor = "#" + item.color;
+                }
+
+                tasks.push({
+                    id: currentId,
+                    text: item.TaskName || item.text,
+                    start_date: new Date(item.StartDate || item.start_date),
+                    duration: item.Duration || item.duration || 0,
+                    parent: parentId || 0,
+                    open: true,
+                    progress: (item.Progress || item.progress || 0) / 100,
+                    type: isMilestone ? "milestone" : "task",
+                    color: finalColor,
+                    textColor: item.textColor || "#ffffff"
+                });
+
+                if (item.Predecessor) {
+                    const sourceId = parseInt(item.Predecessor);
+                    if (!isNaN(sourceId)) {
+                        links.push({ id: linkIdCounter++, source: sourceId, target: currentId, type: "0", color: "#ffa011" });
+                    }
+                }
+                if (item.subtasks) recurse(item.subtasks, currentId);
+            });
+        }
+        recurse(jsonData.data || jsonData, null);
+        return { data: tasks, links: links };
+    }
+
+    // --- LINK EDITING ---
+    let currentEditingLinkId = null;
+    gantt.attachEvent("onLinkDblClick", function(id){
+        if(gantt.isLinkExists(id)) openLinkEditor(id);
+        return false;
+    });
+
+    function openLinkEditor(linkId) {
+        const link = gantt.getLink(linkId);
+        currentEditingLinkId = linkId;
+        document.getElementById('linkEditorColor').value = link.color || "#ffa011";
+        document.getElementById('linkEditorType').value = link.type || "0";
+        document.getElementById('linkEditorModal').classList.add('show');
+    }
+
+    function closeLinkEditor() {
+        document.getElementById('linkEditorModal').classList.remove('show');
+        currentEditingLinkId = null;
+    }
+
+    function saveLinkEdit() {
+        if(currentEditingLinkId && gantt.isLinkExists(currentEditingLinkId)) {
+            const link = gantt.getLink(currentEditingLinkId);
+            link.color = document.getElementById('linkEditorColor').value;
+            link.type = document.getElementById('linkEditorType').value;
+            injectLinkColorStyle(currentEditingLinkId, link.color);
+            gantt.updateLink(currentEditingLinkId);
+            closeLinkEditor();
+        }
+    }
+
+    function deleteLinkEdit() {
+        if(currentEditingLinkId && gantt.isLinkExists(currentEditingLinkId)) {
+            if(confirm("Delete dependency?")) {
+                gantt.deleteLink(currentEditingLinkId);
+                closeLinkEditor();
+            }
+        }
+    }
+
+    document.getElementById('linkEditorModal').addEventListener('click', function(e) {
+        if(e.target.id === 'linkEditorModal') closeLinkEditor();
+    });
+
+    gantt.attachEvent("onAfterLinkUpdate", function(id, link){
+        if(link.color) injectLinkColorStyle(id, link.color);
+    });
+
+    gantt.attachEvent("onAfterLinkAdd", function(id, link){
+        if(link.color) injectLinkColorStyle(id, link.color);
+    });
+
+    function injectLinkColorStyle(linkId, color) {
+        const styleSheet = document.getElementById('dynamic-link-styles');
+        const rule = `.link_id_${linkId} .gantt_line_wrapper div { background-color: ${color} !important; } 
+                      .link_id_${linkId} .gantt_link_arrow { border-left-color: ${color} !important; }`;
+        styleSheet.innerText += rule;
+    }
+
+    // --- FILTER ---
+    function scrollToFirstVisible() {
+        let firstTaskId = null;
+        gantt.eachTask(function(task){
+            if (firstTaskId) return;
+            const row = gantt.getTaskRowNode(task.id);
+            if (row && row.style && row.style.display !== "none") firstTaskId = task.id;
+        });
+        if (firstTaskId) {
+            try { gantt.showTask(firstTaskId); } catch(e) { gantt.scrollTo(0,0); }
+        } else {
+            gantt.scrollTo(0,0);
+        }
+    }
+
+    gantt.attachEvent("onBeforeTaskDisplay", function(id, task){
+        const inputEl = document.querySelector('.search-header-input');
+        const query = inputEl ? inputEl.value.toLowerCase().trim() : "";
+        if(query === "") return true;
+        if(task.text.toLowerCase().includes(query)) return true;
+        
+        function hasMatchingChild(taskId) {
+            const children = gantt.getChildren(taskId);
+            for(let i = 0; i < children.length; i++) {
+                const child = gantt.getTask(children[i]);
+                if(child.text.toLowerCase().includes(query)) return true;
+                if(hasMatchingChild(children[i])) return true;
+            }
+            return false;
+        }
+        if(hasMatchingChild(id)) return true;
+        let parentId = task.parent;
+        while(parentId && parentId != 0) {
+            try {
+                const parent = gantt.getTask(parentId);
+                if(parent.text.toLowerCase().includes(query)) return true;
+                parentId = parent.parent;
+            } catch(e) { break; }
+        }
+        return false;
+    });
+
+    // --- FILE IO ---
+    window.addEventListener('load', () => {
+        // Warning: Local File (file://) access will likely fail due to CORS
+        fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
+            if(data) gantt.parse(processGanttData(data));
+        }).catch((e) => { console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); });
+    });
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                gantt.clearAll(); // This wipes markers
+                document.getElementById('dynamic-link-styles').innerText = "";
+                const searchEl = document.querySelector('.search-header-input');
+                if(searchEl) searchEl.value = "";
+                
+                // Re-add marker immediately after clearing
+                reinitTodayMarker(); 
+                
+                gantt.parse(processGanttData(JSON.parse(ev.target.result)));
+            } catch (err) { alert("Error parsing JSON"); }
+        };
+        reader.readAsText(e.target.files[0]);
+    });
+
+    function saveData() {
+        const blob = new Blob([JSON.stringify(gantt.serialize())], {type: "application/json"});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "gantt_data_saved.json";
+        a.click();
+    }
+
+    // --- 7. MANUAL ZOOM CONTROL (GEOMETRY BASED - ROBUST FOR FIREFOX) ---
+    const container = document.getElementById("gantt_here");
+    let lastZoomTime = 0;
+
+    container.addEventListener('wheel', function(event) {
+        // 1. Basic Element Detection
+        const isTimelineContainer = event.target.closest(".gantt_task");
+        const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale");
+
+        // Only act if inside the timeline container and NOT in the left grid
+        if (isTimelineContainer && !isGrid) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const now = Date.now();
+            if (now - lastZoomTime < 60) return false; 
+            lastZoomTime = now;
+
+            // 2. Geometry Calculation (Robust way to detect Header)
+            const taskRect = gantt.$task.getBoundingClientRect();
+            const offsetY = event.clientY - taskRect.top; // Mouse Y relative to container top
+            
+            // If mouseY is within the scale height, we are in the Header.
+            const headerHeight = gantt.config.scale_height || 60; // Default or configured
+            const isHeader = offsetY < headerHeight;
+
+            // 3. Prepare Zoom Logic
+            const offsetX = event.clientX - taskRect.left;
+            const state = gantt.getScrollState();
+            const absoluteX = state.x + offsetX;
+            const absoluteY = state.y + offsetY;
+            
+            const cursorDate = gantt.dateFromPos(absoluteX);
+            // Calculate Row Index using current activeRowHeight (more stable than config)
+            const cursorRowIndex = absoluteY / activeRowHeight;
+
+            // 4. Calculate Next Index
+            let nextIndex = currentZoomIndex;
+            if (event.deltaY < 0) { nextIndex++; } else { nextIndex--; }
+
+            if (nextIndex < 0) nextIndex = 0;
+            if (nextIndex >= zoomLevels.length) nextIndex = zoomLevels.length - 1;
+
+            if (nextIndex === currentZoomIndex) return;
+            
+            const nextLevel = zoomLevels[nextIndex];
+            currentZoomIndex = nextIndex;
+
+            // 5. Apply Config based on Location (Header vs Body)
+            // Always update time scales
+            gantt.config.scales = nextLevel.scales;
+            gantt.config.min_column_width = nextLevel.min_column_width;
+            
+            if (isHeader) {
+                // IN HEADER: Force row_height to stay as it currently is
+                gantt.config.row_height = activeRowHeight;
+            } else {
+                // IN BODY: Update height and save it as the new active height
+                activeRowHeight = nextLevel.row_height;
+                gantt.config.row_height = activeRowHeight;
+            }
+
+            gantt.render();
+
+            // 6. Restore Scroll Position
+            const newAbsoluteX = gantt.posFromDate(cursorDate);
+            const newScrollLeft = newAbsoluteX - offsetX;
+            
+            let newScrollTop;
+            
+            if (!isHeader) {
+                // If we changed height, recalculate Y position
+                const newRowHeight = gantt.config.row_height;
+                const newAbsoluteY = cursorRowIndex * newRowHeight;
+                newScrollTop = newAbsoluteY - offsetY;
+            } else {
+                // Header zoom: Keep Y scroll exactly where it was
+                newScrollTop = state.y;
+            }
+
+            gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
+        }
+    }, { passive: false, capture: true });
+</script>
+</body>
+</html>
