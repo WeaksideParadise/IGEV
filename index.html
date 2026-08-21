@@ -2,30 +2,48 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- MOBILE: prevent native pinch-zoom so pinch gestures control the Gantt zoom instead -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IGEV - Intuitive Gantt Editor and Viewer</title>
-    
+
     <!-- DHTMLX Gantt Library -->
     <script src="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
-    
+
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/300.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/700.css" rel="stylesheet">
 
     <style>
         html, body {
             height: 100%; margin: 0; padding: 0;
-            font-family: 'Roboto', sans-serif; overflow: hidden; 
+            font-family: 'Roboto', sans-serif; overflow: hidden;
+        }
+        /* MOBILE: flex column layout + dynamic viewport height so it works behind mobile browser toolbars */
+        body {
+            display: flex; flex-direction: column;
+            height: 100dvh;
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .controls {
-            height: 60px; background: #f4f5f7; border-bottom: 1px solid #cecece;
-            padding: 0 20px; display: flex; align-items: center; justify-content: space-between;
+            min-height: 60px; background: #f4f5f7; border-bottom: 1px solid #cecece;
+            padding: 8px 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            display: flex; align-items: center; justify-content: space-between;
             box-sizing: border-box; z-index: 10; position: relative;
+            flex: 0 0 auto; flex-wrap: wrap; row-gap: 8px;
         }
 
-        .controls h2 { margin: 0; font-size: 1.2rem; color: #333; }
-        .toolbar-right { display: flex; gap: 10px; align-items: center; }
+        .controls h2 {
+            margin: 0; font-size: 1.2rem; color: #333;
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .toolbar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
         .instruction { 
             color: #666; font-size: 0.85rem; 
@@ -37,8 +55,10 @@
             background-color: #0288d1; color: white; border: none;
             padding: 8px 16px; border-radius: 4px; cursor: pointer;
             font-size: 0.9rem; transition: background 0.2s;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
         }
         button:hover { background-color: #0277bd; }
+        button:active { transform: translateY(1px); }
         button.secondary { background-color: #fff; color: #333; border: 1px solid #ccc; }
         button.highlight { border: 2px solid #0288d1; color: #0288d1; font-weight: bold; }
         button.add-btn { background-color: #2e7d32; }
@@ -74,14 +94,22 @@
             border: 1px solid #ccc;
             font-weight: normal; 
             outline: none;
+            touch-action: manipulation;
         }
         .search-header-input:focus {
             border-color: #0288d1;
         }
 
         #gantt_here {
-            width: 100%; height: calc(100vh - 60px); 
+            width: 100%;
+            flex: 1 1 auto; min-height: 0;
             background: white; position: relative;
+            /* MOBILE: allow native one-finger panning, but keep pinch gestures for our JS zoom handler */
+            touch-action: pan-x pan-y;
+            -webkit-touch-callout: none;
+        }
+        #gantt_here .gantt_task, #gantt_here .gantt_grid_data {
+            user-select: none; -webkit-user-select: none;
         }
 
         /* Visual Feedback */
@@ -107,25 +135,76 @@
             width: 0 !important; 
         }
 
+        /* --- MOBILE: floating zoom controls (pinch alternative / quick access) --- */
+        .zoom-controls {
+            position: fixed;
+            right: max(14px, env(safe-area-inset-right));
+            bottom: calc(14px + env(safe-area-inset-bottom));
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            z-index: 100;
+        }
+        .zoom-controls button {
+            width: 46px; height: 46px; border-radius: 50%;
+            padding: 0; font-size: 1.25rem; line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+        }
+        .zoom-label {
+            background: rgba(255,255,255,0.94); border: 1px solid #d0d0d0; color: #555;
+            border-radius: 10px; padding: 2px 8px; font-size: 0.68rem; font-weight: 500;
+            text-transform: uppercase; letter-spacing: 0.4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+        }
+
         #linkEditorModal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+            padding: 16px; box-sizing: border-box;
         }
         #linkEditorModal.show { display: flex; }
         .link-editor-content {
-            background: white; padding: 20px; border-radius: 8px; width: 400px;
+            background: white; padding: 20px; border-radius: 8px;
+            width: 400px; max-width: 100%;
+            max-height: calc(100vh - 40px); overflow-y: auto;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }
         .link-editor-content h3 { margin: 0 0 15px 0; color: #333; }
         .link-editor-row { margin-bottom: 15px; }
         .link-editor-row label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
         .link-editor-row input, .link-editor-row select {
-            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+            width: 100%; padding: 10px 8px; border: 1px solid #ccc; border-radius: 4px;
             box-sizing: border-box;
         }
         .link-editor-buttons { display: flex; gap: 10px; margin-top: 20px; }
         .link-editor-buttons button { flex: 1; }
         .btn-delete { background: #d32f2f !important; }
+
+        /* ================= MOBILE / RESPONSIVE ADJUSTMENTS ================= */
+        @media (max-width: 1000px) {
+            .instruction { display: none; } /* hide long desktop-only hint */
+        }
+
+        @media (max-width: 768px) {
+            /* Full-screen lightbox on small devices */
+            .gantt_cal_light, .gantt_cal_light_wide {
+                width: 100vw !important; max-width: 100vw !important;
+                left: 0 !important; top: 0 !important;
+                height: 100% !important; max-height: 100% !important;
+                border-radius: 0; box-sizing: border-box; overflow-y: auto;
+            }
+            /* 16px inputs prevent iOS auto-zoom on focus */
+            .gantt_cal_light select, .gantt_cal_light input, .gantt_cal_light textarea,
+            .link-editor-content select, .link-editor-content input,
+            .search-header-input { font-size: 16px; }
+        }
+
+        @media (max-width: 760px) {
+            .controls { min-height: 0; padding: 8px 12px; }
+            .controls h2 { flex: 1 1 100%; font-size: 1rem; }
+            .toolbar-right { width: 100%; }
+            button { padding: 10px 12px; font-size: 0.85rem; min-height: 42px; } /* touch-friendly targets */
+        }
     </style>
     <style id="dynamic-link-styles"></style>
 </head>
@@ -135,16 +214,24 @@
     <h2>IGEV - Intuitive Gantt Editor and Viewer</h2>
     <div class="toolbar-right">
         <div class="instruction">
-            Header Wheel: ↔️ Time only | Body Wheel: ↔️ Time + ↕️ Height
+            Header Wheel: ↔️ Time only | Body Wheel: ↔️ Time + ↕️ Height | Touch: pinch to zoom
         </div>
         <input type="file" id="fileInput" accept=".json">
         <input type="color" id="linkColorInput"> 
+        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()">📋 Hide List</button>
         <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
         <button onclick="saveData()">💾 Save Changes</button>
     </div>
 </div>
 
 <div id="gantt_here"></div>
+
+<!-- MOBILE: on-screen zoom controls (alternative to wheel / pinch) -->
+<div class="zoom-controls">
+    <button id="zoomInBtn" aria-label="Zoom in" title="Zoom in">＋</button>
+    <span class="zoom-label" id="zoomLabel">month</span>
+    <button id="zoomOutBtn" aria-label="Zoom out" title="Zoom out">－</button>
+</div>
 
 <!-- Link Editor Modal -->
 <div id="linkEditorModal">
@@ -172,6 +259,10 @@
 </div>
 
 <script>
+    // --- 0. DEVICE DETECTION HELPERS (MOBILE) ---
+    const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+
     // --- 1. CUSTOM COLOR PICKER ---
     gantt.form_blocks["color_picker"] = {
         render: function (sns) {
@@ -187,22 +278,32 @@
         focus: function (node) { node.querySelector("input").focus(); }
     };
 
-    // --- 2. CONFIGURATION ---
+    // --- 2. TOUCH SUPPORT CONFIG (MOBILE) ---
+    // Enables built-in touch handling (auto-detected), long-press task dragging and haptic feedback.
+    gantt.config.touch = true;
+    gantt.config.touch_drag = true;
+    gantt.config.touch_feedback = true;
+
+    // --- 3. CONFIGURATION ---
     gantt.config.order_branch = true;
     gantt.config.order_branch_free = true;
 
     const searchHeaderHTML = `
         <div class='search-header-wrapper'>
             Task Name
-            <input type='text' class='search-header-input' placeholder='🔍 Search...' oninput='applyFilter(this.value)' onclick='event.stopPropagation()' onmousedown='event.stopPropagation()'>
+            <input type='text' class='search-header-input' placeholder='🔍 Search...' oninput='applyFilter(this.value)' onclick='event.stopPropagation()' onmousedown='event.stopPropagation()' ontouchstart='event.stopPropagation()'>
         </div>`;
 
-    gantt.config.columns = [
-        { name: "text", label: searchHeaderHTML, tree: true, width: 250, min_width: 150, resize: true },
-        { name: "start_date", label: "Start", align: "center", width: 90, resize: true},
-        { name: "duration", label: "Days", align: "center", width: 50},
-        { name: "add", width: 44} // The add column native button
+    // MOBILE: narrower grid columns on phones; hide the "Days" column to leave room for the timeline
+    const ganttColumns = [
+        { name: "text", label: searchHeaderHTML, tree: true, width: isSmallScreen ? 165 : 250, min_width: isSmallScreen ? 120 : 150, resize: true },
+        { name: "start_date", label: "Start", align: "center", width: isSmallScreen ? 65 : 90, resize: true }
     ];
+    if (!isSmallScreen) {
+        ganttColumns.push({ name: "duration", label: "Days", align: "center", width: 50 });
+    }
+    ganttColumns.push({ name: "add", width: isSmallScreen ? 38 : 44 }); // The add column native button
+    gantt.config.columns = ganttColumns;
 
     // --- LIGHTBOX SECTIONS ---
     // Added 'typeselect' to allow choosing between Task, Project, and Milestone
@@ -250,7 +351,14 @@
 
     gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
 
-    // --- 3. CUSTOM ZOOM LEVELS ---
+    // --- SEARCH STATE (kept across re-renders, e.g. grid toggle / resize / zoom) ---
+    let currentSearch = "";
+    function restoreSearchInput() {
+        const el = document.querySelector('.search-header-input');
+        if (el && el.value !== currentSearch) el.value = currentSearch;
+    }
+
+    // --- 4. CUSTOM ZOOM LEVELS ---
     const zoomLevels = [
         { name: "year", scale_height: 60, row_height: 25, min_column_width: 30, scales: [{unit: "year", step: 1, format: "%Y"}]},
         { name: "quarter", scale_height: 60, row_height: 30, min_column_width: 90, scales: [{unit: "year", step: 1, format: "%Y"}, {unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1)}]},
@@ -262,6 +370,65 @@
     let currentZoomIndex = 2; // Start at 'month'
     let activeRowHeight = zoomLevels[currentZoomIndex].row_height; 
 
+    function updateZoomLabel() {
+        const labelEl = document.getElementById('zoomLabel');
+        if (labelEl) labelEl.textContent = zoomLevels[currentZoomIndex].name;
+    }
+
+    // Core zoom routine shared by mouse wheel, touch pinch and the on-screen +/- buttons.
+    function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
+        if (!gantt.$task) return;
+        if (nextIndex < 0) nextIndex = 0;
+        if (nextIndex >= zoomLevels.length) nextIndex = zoomLevels.length - 1;
+        if (nextIndex === currentZoomIndex) return;
+
+        const taskRect = gantt.$task.getBoundingClientRect();
+        const offsetX = clientX - taskRect.left;
+        const offsetY = clientY - taskRect.top;
+        const state = gantt.getScrollState();
+        const absoluteX = state.x + offsetX;
+        const absoluteY = state.y + offsetY;
+
+        const cursorDate = gantt.dateFromPos(absoluteX);
+        const cursorRowIndex = absoluteY / activeRowHeight;
+
+        const nextLevel = zoomLevels[nextIndex];
+        currentZoomIndex = nextIndex;
+
+        gantt.config.scales = nextLevel.scales;
+        gantt.config.min_column_width = nextLevel.min_column_width;
+
+        if (anchorInHeader) {
+            gantt.config.row_height = activeRowHeight;
+        } else {
+            activeRowHeight = nextLevel.row_height;
+            gantt.config.row_height = activeRowHeight;
+        }
+
+        gantt.render();
+        restoreSearchInput();
+        updateZoomLabel();
+
+        const newAbsoluteX = gantt.posFromDate(cursorDate);
+        const newScrollLeft = newAbsoluteX - offsetX;
+
+        let newScrollTop;
+        if (!anchorInHeader) {
+            const newRowHeight = gantt.config.row_height;
+            const newAbsoluteY = cursorRowIndex * newRowHeight;
+            newScrollTop = newAbsoluteY - offsetY;
+        } else {
+            newScrollTop = state.y;
+        }
+
+        gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
+    }
+
+    // MOBILE: start without the tree panel on very small screens (toggle it back with the 📋 button)
+    if (window.innerWidth < 560) {
+        gantt.config.show_grid = false;
+    }
+
     function initManualZoom() {
         const level = zoomLevels[currentZoomIndex];
         gantt.config.scales = level.scales;
@@ -269,6 +436,7 @@
         gantt.config.scale_height = level.scale_height;
         gantt.config.row_height = activeRowHeight;
         gantt.init("gantt_here");
+        updateZoomLabel();
     }
     initManualZoom();
 
@@ -284,8 +452,25 @@
 
     reinitTodayMarker();
 
-    // --- 4. DATA LOGIC ---
+    // --- GRID TOGGLE (MOBILE: give the timeline full width when needed) ---
+    function toggleGrid(forceState) {
+        const target = (forceState === undefined) ? !gantt.config.show_grid : forceState;
+        if (gantt.config.show_grid !== target) {
+            gantt.config.show_grid = target;
+            gantt.render();
+            restoreSearchInput();
+        }
+        updateGridToggleBtn();
+    }
+    function updateGridToggleBtn() {
+        const btn = document.getElementById('gridToggleBtn');
+        if (btn) btn.innerHTML = gantt.config.show_grid ? "📋 Hide List" : "📋 Show List";
+    }
+    updateGridToggleBtn();
+
+    // --- 5. DATA LOGIC ---
     window.applyFilter = function(query) {
+        currentSearch = query;
         gantt.refreshData();
         setTimeout(scrollToFirstVisible, 40);
     };
@@ -351,6 +536,32 @@
     gantt.attachEvent("onLinkDblClick", function(id){
         if(gantt.isLinkExists(id)) openLinkEditor(id);
         return false;
+    });
+
+    // MOBILE: double-tap a link to edit it (dblclick is unreliable on touch screens)
+    let linkTapState = { id: null, time: 0 };
+    gantt.attachEvent("onLinkClick", function(id){
+        const now = Date.now();
+        if (linkTapState.id === id && now - linkTapState.time < 450) {
+            linkTapState = { id: null, time: 0 };
+            if (gantt.isLinkExists(id)) openLinkEditor(id);
+        } else {
+            linkTapState = { id: id, time: now };
+        }
+    });
+
+    // MOBILE: double-tap a task to open its lightbox on touch devices
+    let taskTapState = { id: null, time: 0 };
+    gantt.attachEvent("onTaskClick", function(id){
+        if (!isCoarsePointer) return true;
+        const now = Date.now();
+        if (taskTapState.id === id && now - taskTapState.time < 450) {
+            taskTapState = { id: null, time: 0 };
+            gantt.showLightbox(id);
+            return false;
+        }
+        taskTapState = { id: id, time: now };
+        return true;
     });
 
     function openLinkEditor(linkId) {
@@ -460,6 +671,7 @@
             try {
                 gantt.clearAll(); 
                 document.getElementById('dynamic-link-styles').innerText = "";
+                currentSearch = "";
                 const searchEl = document.querySelector('.search-header-input');
                 if(searchEl) searchEl.value = "";
                 
@@ -478,7 +690,7 @@
         a.click();
     }
 
-    // --- 7. MANUAL ZOOM CONTROL ---
+    // --- 6. ZOOM CONTROLS: WHEEL (desktop) + PINCH (mobile) + BUTTONS (both) ---
     const container = document.getElementById("gantt_here");
     let lastZoomTime = 0;
 
@@ -496,57 +708,91 @@
 
             const taskRect = gantt.$task.getBoundingClientRect();
             const offsetY = event.clientY - taskRect.top; 
-            
             const headerHeight = gantt.config.scale_height || 60; 
             const isHeader = offsetY < headerHeight;
 
-            const offsetX = event.clientX - taskRect.left;
-            const state = gantt.getScrollState();
-            const absoluteX = state.x + offsetX;
-            const absoluteY = state.y + offsetY;
-            
-            const cursorDate = gantt.dateFromPos(absoluteX);
-            const cursorRowIndex = absoluteY / activeRowHeight;
-
-            let nextIndex = currentZoomIndex;
-            if (event.deltaY < 0) { nextIndex++; } else { nextIndex--; }
-
-            if (nextIndex < 0) nextIndex = 0;
-            if (nextIndex >= zoomLevels.length) nextIndex = zoomLevels.length - 1;
-
-            if (nextIndex === currentZoomIndex) return;
-            
-            const nextLevel = zoomLevels[nextIndex];
-            currentZoomIndex = nextIndex;
-
-            gantt.config.scales = nextLevel.scales;
-            gantt.config.min_column_width = nextLevel.min_column_width;
-            
-            if (isHeader) {
-                gantt.config.row_height = activeRowHeight;
-            } else {
-                activeRowHeight = nextLevel.row_height;
-                gantt.config.row_height = activeRowHeight;
-            }
-
-            gantt.render();
-
-            const newAbsoluteX = gantt.posFromDate(cursorDate);
-            const newScrollLeft = newAbsoluteX - offsetX;
-            
-            let newScrollTop;
-            
-            if (!isHeader) {
-                const newRowHeight = gantt.config.row_height;
-                const newAbsoluteY = cursorRowIndex * newRowHeight;
-                newScrollTop = newAbsoluteY - offsetY;
-            } else {
-                newScrollTop = state.y;
-            }
-
-            gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
+            const nextIndex = event.deltaY < 0 ? currentZoomIndex + 1 : currentZoomIndex - 1;
+            applyZoom(nextIndex, event.clientX, event.clientY, isHeader);
         }
     }, { passive: false, capture: true });
+
+    // MOBILE: pinch-to-zoom over the timeline (two-finger gesture)
+    let pinchState = null;
+
+    function getTouchDistance(touchList) {
+        const dx = touchList[0].clientX - touchList[1].clientX;
+        const dy = touchList[0].clientY - touchList[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    container.addEventListener('touchstart', function (e) {
+        if (e.touches.length === 2 && e.target.closest('.gantt_task')) {
+            pinchState = { distance: getTouchDistance(e.touches) };
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', function (e) {
+        if (!pinchState || e.touches.length !== 2) return;
+        e.preventDefault(); // stop the browser from zooming/scrolling while pinching
+        e.stopPropagation();
+
+        const newDistance = getTouchDistance(e.touches);
+        if (!newDistance) return;
+        const ratio = newDistance / pinchState.distance;
+
+        if (ratio > 1.25 || ratio < 0.8) {
+            const now = Date.now();
+            if (now - lastZoomTime > 180) {
+                lastZoomTime = now;
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const taskRect = gantt.$task.getBoundingClientRect();
+                const headerHeight = gantt.config.scale_height || 60;
+                const inHeader = (midY - taskRect.top) < headerHeight;
+                applyZoom(currentZoomIndex + (ratio > 1 ? 1 : -1), midX, midY, inHeader);
+            }
+            pinchState.distance = newDistance; // allow continuous stepping while pinching
+        }
+    }, { passive: false });
+
+    const endPinch = function (e) {
+        if (!e.touches || e.touches.length < 2) pinchState = null;
+    };
+    container.addEventListener('touchend', endPinch, { passive: true });
+    container.addEventListener('touchcancel', endPinch, { passive: true });
+
+    // On-screen +/- zoom buttons (anchored at the visible center of the timeline)
+    function zoomStepFromUI(delta) {
+        const now = Date.now();
+        if (now - lastZoomTime < 100) return;
+        lastZoomTime = now;
+        const taskRect = gantt.$task.getBoundingClientRect();
+        const headerHeight = gantt.config.scale_height || 60;
+        const centerX = taskRect.left + taskRect.width / 2;
+        const centerY = taskRect.top + headerHeight + Math.max(0, (taskRect.height - headerHeight) / 2);
+        applyZoom(currentZoomIndex + delta, centerX, centerY, false);
+    }
+    document.getElementById('zoomInBtn').addEventListener('click', () => zoomStepFromUI(+1));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStepFromUI(-1));
+
+    // MOBILE: block iOS Safari system pinch gestures over the app
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+    document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+
+    // MOBILE: suppress the long-press context menu so long-press can be used for dragging tasks
+    container.addEventListener('contextmenu', function (e) {
+        if (isCoarsePointer) e.preventDefault();
+    });
+
+    // MOBILE / RESIZE: re-render on orientation change / window resize (search text is preserved)
+    let resizeTimer = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            gantt.render();
+            restoreSearchInput();
+        }, 250);
+    });
 </script>
 </body>
 </html>
