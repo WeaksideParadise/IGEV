@@ -780,35 +780,35 @@
         }
 
         /* ==========================================================
-           FIX: Add button visibility in dark themes
+           FIX: Add button visibility and shape (CSS Plus instead of PNG)
            ========================================================== */
         .gantt_add, .gantt_grid_head_add {
-            transition: opacity 0.2s, filter 0.2s;
-            opacity: 0.75;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
+            background-image: none !important;
+            position: relative !important;
+            opacity: 0.6 !important;
+            transition: opacity 0.2s !important;
+            filter: none !important;
         }
         .gantt_add:hover, .gantt_grid_head_add:hover {
-            opacity: 1;
+            opacity: 1 !important;
         }
-        
-        [data-theme="void"] .gantt_add,
-        [data-theme="amber"] .gantt_add,
-        [data-theme="matrix"] .gantt_add,
-        [data-theme="void"] .gantt_grid_head_add,
-        [data-theme="amber"] .gantt_grid_head_add,
-        [data-theme="matrix"] .gantt_grid_head_add {
-            filter: brightness(0) invert(1) !important;
+        .gantt_add::before, .gantt_grid_head_add::before {
+            content: '+';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.6rem;
+            font-weight: 600;
+            font-family: var(--font-display);
+            color: var(--text);
+            line-height: 1;
+            pointer-events: none;
+            user-select: none;
+            transition: color 0.2s;
         }
-        
-        [data-theme="void"] .gantt_add:hover,
-        [data-theme="amber"] .gantt_add:hover,
-        [data-theme="matrix"] .gantt_add:hover,
-        [data-theme="void"] .gantt_grid_head_add:hover,
-        [data-theme="amber"] .gantt_grid_head_add:hover,
-        [data-theme="matrix"] .gantt_grid_head_add:hover {
-            filter: brightness(0) invert(1) drop-shadow(0 0 4px var(--accent)) !important;
-            opacity: 1;
+        .gantt_add:hover::before, .gantt_grid_head_add:hover::before {
+            color: var(--accent);
         }
 
         /* ==========================================================
