@@ -1,182 +1,217 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="void">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IGEV - Intuitive Gantt Editor and Viewer</title>
 
     <script src="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.js"></script>
-    <link id="ganttSkinLink" href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
 
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/300.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/400.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/500.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/700.css" rel="stylesheet">
 
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('igev_theme');
+          if (t) document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
+
     <style>
-        /* =================================================================== */
-        /* THEME CSS VARIABLES (Light is default)                            */
-        /* =================================================================== */
-        :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f4f5f7;
-            --bg-tertiary: #e1e4e8;
-            --bg-elevated: #ffffff;
-            --text-primary: #333333;
-            --text-secondary: #666666;
-            --text-tertiary: #888888;
-            --border-color: #cecece;
-            --border-light: #ebebeb;
-            --accent: #0288d1;
-            --accent-hover: #0277bd;
-            --accent-text: #ffffff;
-            --success: #2e7d32;
-            --success-hover: #1b5e20;
-            --danger: #d32f2f;
-            --danger-hover: #b71c1c;
-            --warning: #ff9800;
+        /* ==========================================================
+           THEME TOKEN DEFINITIONS
+           ========================================================== */
+        :root, [data-theme="void"] {
+            --wp-void: #04070e;
+            --wp-abyss: #060b16;
+            --wp-panel: #0a1120;
+            --wp-raise: #0e1729;
+            --wp-line: #16233b;
+            --wp-line2: #23395c;
+            --wp-ink: #e9f3f9;
+            --wp-dim: #94a9c0;
+            --wp-faint: #5b7288;
+            --wp-cyan: #4fe3d2;
+            --wp-amber: #ffb648;
+            --wp-magenta: #ff5c86;
+            --wp-lime: #7bf0a4;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(79, 227, 210, 0.3);
+
+            --font-body: 'Space Grotesk', 'Roboto', system-ui, sans-serif;
+            --font-display: 'Chakra Petch', 'Roboto', sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+            --task-default: #4fe3d2;
+            --task-project: #7bf0a4;
+            --task-milestone: #ff5c86;
+            --link-default: #ffb648;
+            --weekend-bg: rgba(79, 227, 210, 0.04);
+            --selected-bg: rgba(79, 227, 210, 0.12);
+            --grid-stripe: rgba(255, 255, 255, 0.02);
+            --task-text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+        }
+
+        [data-theme="light"] {
+            --wp-void: #ffffff;
+            --wp-abyss: #fafbfc;
+            --wp-panel: #f4f5f7;
+            --wp-raise: #e1e4e8;
+            --wp-line: #cecece;
+            --wp-line2: #b0b0b0;
+            --wp-ink: #1a1a1a;
+            --wp-dim: #555555;
+            --wp-faint: #999999;
+            --wp-cyan: #0288d1;
+            --wp-amber: #f57c00;
+            --wp-magenta: #d32f2f;
+            --wp-lime: #2e7d32;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-panel);
+            --bg-panel: var(--wp-raise);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+            --font-body: 'Roboto', system-ui, sans-serif;
+            --font-display: 'Roboto', sans-serif;
+            --font-mono: ui-monospace, 'Roboto Mono', monospace;
+
+            --task-default: #3db9d3;
+            --task-project: #4caf50;
+            --task-milestone: #e91e63;
+            --link-default: #ffa011;
             --weekend-bg: #f4f7f4;
-            --gantt-row-alt: #fafafa;
-            --gantt-header: #f5f5f5;
-            --gantt-header-text: #424242;
-            --gantt-border: #ebebeb;
-            --gantt-cell-hover: rgba(0, 136, 209, 0.05);
-            --today-line: #ff5252;
-            --modal-bg: rgba(0,0,0,0.5);
-            --shadow: rgba(0,0,0,0.12);
-            --shadow-strong: rgba(0,0,0,0.25);
-            --button-secondary-bg: #ffffff;
-            --button-secondary-text: #333333;
-            --button-secondary-border: #cccccc;
-            --input-bg: #ffffff;
-            --input-border: #cccccc;
-            --tooltip-bg: rgba(50, 50, 50, 0.95);
-            --tooltip-text: #ffffff;
+            --selected-bg: rgba(2, 136, 209, 0.08);
+            --grid-stripe: rgba(0, 0, 0, 0.02);
+            --task-text-shadow: 0 1px 1px rgba(0,0,0,0.3);
         }
 
-        /* DARK THEME */
-        .theme-dark {
-            --bg-primary: #1e1e1e;
-            --bg-secondary: #2a2a2a;
-            --bg-tertiary: #3a3a3a;
-            --bg-elevated: #2f2f2f;
-            --text-primary: #e0e0e0;
-            --text-secondary: #aaaaaa;
-            --text-tertiary: #888888;
-            --border-color: #444444;
-            --border-light: #3a3a3a;
-            --accent: #4fc3f7;
-            --accent-hover: #29b6f6;
-            --accent-text: #0a0a0a;
-            --success: #66bb6a;
-            --success-hover: #4caf50;
-            --danger: #ef5350;
-            --danger-hover: #e53935;
-            --warning: #ffb74d;
-            --weekend-bg: #262626;
-            --gantt-row-alt: #242424;
-            --gantt-header: #2d2d2d;
-            --gantt-header-text: #cccccc;
-            --gantt-border: #383838;
-            --gantt-cell-hover: rgba(79, 195, 247, 0.08);
-            --today-line: #ff8a80;
-            --modal-bg: rgba(0,0,0,0.75);
-            --shadow: rgba(0,0,0,0.4);
-            --shadow-strong: rgba(0,0,0,0.6);
-            --button-secondary-bg: #333333;
-            --button-secondary-text: #e0e0e0;
-            --button-secondary-border: #555555;
-            --input-bg: #2a2a2a;
-            --input-border: #555555;
-            --tooltip-bg: rgba(240, 240, 240, 0.95);
-            --tooltip-text: #1e1e1e;
+        [data-theme="amber"] {
+            --wp-void: #0a0800;
+            --wp-abyss: #121000;
+            --wp-panel: #1a1400;
+            --wp-raise: #241c00;
+            --wp-line: #3d3000;
+            --wp-line2: #5c4800;
+            --wp-ink: #ffcc00;
+            --wp-dim: #cc9900;
+            --wp-faint: #806000;
+            --wp-cyan: #ffaa00;
+            --wp-amber: #ffdd00;
+            --wp-magenta: #ff6600;
+            --wp-lime: #ffee88;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(255, 170, 0, 0.4);
+
+            --font-body: 'JetBrains Mono', 'Courier New', monospace;
+            --font-display: 'Chakra Petch', monospace;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --task-default: #ffaa00;
+            --task-project: #ffee88;
+            --task-milestone: #ff6600;
+            --link-default: #ffdd00;
+            --weekend-bg: rgba(255, 170, 0, 0.05);
+            --selected-bg: rgba(255, 170, 0, 0.15);
+            --grid-stripe: rgba(255, 170, 0, 0.03);
+            --task-text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }
 
-        /* MATERIAL THEME (purple/teal modern flat) */
-        .theme-material {
-            --bg-primary: #fafafa;
-            --bg-secondary: #f5f5f5;
-            --bg-tertiary: #e0e0e0;
-            --bg-elevated: #ffffff;
-            --text-primary: #212121;
-            --text-secondary: #757575;
-            --text-tertiary: #9e9e9e;
-            --border-color: #e0e0e0;
-            --border-light: #eeeeee;
-            --accent: #673ab7;
-            --accent-hover: #5e35b1;
-            --accent-text: #ffffff;
-            --success: #009688;
-            --success-hover: #00796b;
-            --danger: #f44336;
-            --danger-hover: #d32f2f;
-            --warning: #ff9800;
-            --weekend-bg: #f1f8e9;
-            --gantt-row-alt: #fcfcfc;
-            --gantt-header: #eeeeee;
-            --gantt-header-text: #424242;
-            --gantt-border: #e0e0e0;
-            --gantt-cell-hover: rgba(103, 58, 183, 0.06);
-            --today-line: #e91e63;
-            --modal-bg: rgba(33, 33, 33, 0.6);
-            --shadow: rgba(0,0,0,0.1);
-            --shadow-strong: rgba(0,0,0,0.2);
-            --button-secondary-bg: #ffffff;
-            --button-secondary-text: #212121;
-            --button-secondary-border: #e0e0e0;
-            --input-bg: #ffffff;
-            --input-border: #bdbdbd;
-            --tooltip-bg: rgba(33, 33, 33, 0.92);
-            --tooltip-text: #ffffff;
+        [data-theme="matrix"] {
+            --wp-void: #000a00;
+            --wp-abyss: #001400;
+            --wp-panel: #002800;
+            --wp-raise: #003d00;
+            --wp-line: #004d00;
+            --wp-line2: #008000;
+            --wp-ink: #00ff41;
+            --wp-dim: #00cc33;
+            --wp-faint: #008020;
+            --wp-cyan: #00ff41;
+            --wp-amber: #88ff88;
+            --wp-magenta: #00aa00;
+            --wp-lime: #aaffaa;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(0, 255, 65, 0.5);
+
+            --font-body: 'JetBrains Mono', 'Courier New', monospace;
+            --font-display: 'Chakra Petch', monospace;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --task-default: #00ff41;
+            --task-project: #aaffaa;
+            --task-milestone: #00aa00;
+            --link-default: #88ff88;
+            --weekend-bg: rgba(0, 255, 65, 0.05);
+            --selected-bg: rgba(0, 255, 65, 0.15);
+            --grid-stripe: rgba(0, 255, 65, 0.03);
+            --task-text-shadow: 0 0 4px rgba(0, 255, 65, 0.5);
         }
 
-        /* HIGH CONTRAST THEME (Accessibility) */
-        .theme-contrast {
-            --bg-primary: #000000;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #2a2a2a;
-            --bg-elevated: #0a0a0a;
-            --text-primary: #ffffff;
-            --text-secondary: #ffffff;
-            --text-tertiary: #f5f5f5;
-            --border-color: #ffffff;
-            --border-light: #ffffff;
-            --accent: #ffeb3b;
-            --accent-hover: #fdd835;
-            --accent-text: #000000;
-            --success: #00e676;
-            --success-hover: #00c853;
-            --danger: #ff1744;
-            --danger-hover: #d50000;
-            --warning: #ffa726;
-            --weekend-bg: #0a0a0a;
-            --gantt-row-alt: #050505;
-            --gantt-header: #111111;
-            --gantt-header-text: #ffffff;
-            --gantt-border: #ffffff;
-            --gantt-cell-hover: rgba(255, 235, 59, 0.15);
-            --today-line: #ffeb3b;
-            --modal-bg: rgba(0,0,0,0.9);
-            --shadow: rgba(255,255,255,0.15);
-            --shadow-strong: rgba(255,255,255,0.3);
-            --button-secondary-bg: #000000;
-            --button-secondary-text: #ffffff;
-            --button-secondary-border: #ffffff;
-            --input-bg: #000000;
-            --input-border: #ffffff;
-            --tooltip-bg: #ffffff;
-            --tooltip-text: #000000;
-        }
-
-        /* =================================================================== */
-        /* BASE STYLES (theme-aware)                                           */
-        /* =================================================================== */
+        /* ==========================================================
+           BASE LAYOUT
+           ========================================================== */
         html, body {
             height: 100%; margin: 0; padding: 0;
-            font-family: 'Roboto', sans-serif; overflow: hidden;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            transition: background-color 0.25s, color 0.25s;
+            font-family: var(--font-body);
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--text);
         }
         body {
             display: flex; flex-direction: column;
@@ -187,69 +222,115 @@
 
         .controls {
             min-height: 60px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-raised);
+            border-bottom: 1px solid var(--border);
             padding: 8px 20px;
             padding-left: max(20px, env(safe-area-inset-left));
             padding-right: max(20px, env(safe-area-inset-right));
             display: flex; align-items: center; justify-content: space-between;
             box-sizing: border-box; z-index: 10; position: relative;
             flex: 0 0 auto; flex-wrap: wrap; row-gap: 8px;
-            transition: background-color 0.25s, border-color 0.25s;
         }
 
         .controls h2 {
-            margin: 0; font-size: 1.2rem; color: var(--text-primary);
+            margin: 0; font-size: 1.2rem; color: var(--text);
             min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-family: var(--font-display);
+            font-weight: 600;
+            letter-spacing: 0.02em;
         }
         .toolbar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 
-        .instruction { 
-            color: var(--text-secondary); font-size: 0.85rem; 
-            background: var(--bg-tertiary); padding: 5px 12px; 
+        .instruction {
+            color: var(--text-dim); font-size: 0.85rem;
+            background: var(--bg-panel); padding: 5px 12px;
             border-radius: 15px; margin-right: 15px;
-            transition: background-color 0.25s, color 0.25s;
+            border: 1px solid var(--border);
         }
 
         button {
-            background-color: var(--accent); color: var(--accent-text); border: none;
+            background-color: var(--bg-raised);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
             padding: 8px 16px; border-radius: 4px; cursor: pointer;
-            font-size: 0.9rem; transition: background 0.2s, transform 0.1s, color 0.2s, border-color 0.2s;
+            font-size: 0.9rem;
+            font-family: var(--font-display);
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: all 0.2s;
             touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        button:hover { background-color: var(--accent-hover); }
+        button:hover {
+            background-color: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
         button:active { transform: translateY(1px); }
         button.secondary {
-            background-color: var(--button-secondary-bg);
-            color: var(--button-secondary-text);
-            border: 1px solid var(--button-secondary-border);
+            background-color: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
         }
-        button.secondary:hover { background-color: var(--bg-tertiary); }
-        button.highlight { border: 2px solid var(--accent); color: var(--accent); font-weight: bold; background: transparent; }
-        button.add-btn { background-color: var(--success); }
-        button.add-btn:hover { background-color: var(--success-hover); }
-        button.danger { background-color: var(--danger); }
-        button.danger:hover { background-color: var(--danger-hover); }
+        button.secondary:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: rgba(79, 227, 210, 0.05);
+        }
+        button.highlight {
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: transparent;
+        }
+        button.highlight:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        button.add-btn { background-color: #2e7d32; }
+        button.add-btn:hover { background-color: #1b5e20; }
+        button.danger {
+            color: var(--accent-3);
+            border-color: var(--accent-3);
+            background: transparent;
+        }
+        button.danger:hover {
+            background: var(--accent-3);
+            color: var(--bg);
+        }
 
-        /* Magnet button state */
         button.magnet-on {
-            background-color: var(--warning) !important;
-            color: #000000 !important;
-            border-color: #ef6c00 !important;
-            font-weight: 500;
+            background-color: var(--accent-2) !important;
+            color: var(--bg) !important;
+            border-color: var(--accent-2) !important;
+            font-weight: 600;
         }
-        button.magnet-on:hover { background-color: #f57c00 !important; }
-
-        /* Theme button special styling */
-        .theme-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 500;
+        button.magnet-on:hover {
+            filter: brightness(1.1);
         }
-        .theme-btn .theme-name { font-size: 0.8rem; }
 
         #fileInput, #linkColorInput { display: none; }
+
+        .theme-select {
+            background: var(--bg-raised);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+            padding: 8px 32px 8px 12px;
+            border-radius: 4px;
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23778899' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+        .theme-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
 
         .gantt_grid_scale .gantt_grid_head_cell {
             white-space: normal !important;
@@ -275,31 +356,34 @@
             margin-top: 5px;
             font-size: 12px;
             border-radius: 15px;
-            border: 1px solid var(--input-border);
-            font-weight: normal; 
+            background: var(--bg-panel) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--border) !important;
+            font-weight: normal;
             outline: none;
+            font-family: var(--font-body);
             touch-action: manipulation;
-            background: var(--input-bg);
-            color: var(--text-primary);
-            transition: border-color 0.2s, background-color 0.25s, color 0.25s;
         }
         .search-header-input:focus {
-            border-color: var(--accent);
+            border-color: var(--accent) !important;
+        }
+        .search-header-input::placeholder {
+            color: var(--text-faint);
         }
 
         #gantt_here {
             width: 100%;
             flex: 1 1 auto; min-height: 0;
-            background: var(--bg-primary); position: relative;
+            background: var(--bg-surface); position: relative;
             touch-action: pan-x pan-y;
             -webkit-touch-callout: none;
-            transition: background-color 0.25s;
+            color: var(--text);
         }
         #gantt_here .gantt_task, #gantt_here .gantt_grid_data {
             user-select: none; -webkit-user-select: none;
         }
 
-        .gantt_task_scale { cursor: ew-resize !important; } 
+        .gantt_task_scale { cursor: ew-resize !important; }
         .gantt_task_content { cursor: grab; }
 
         .weekend { background: var(--weekend-bg) !important; }
@@ -307,87 +391,18 @@
         .gantt_task_line { border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
         .gantt_task_progress { background-color: rgba(0,0,0,0.2); }
 
-        /* Gantt Chart Theme Overrides */
-        .gantt_grid_data, .gantt_task_data {
-            background: var(--bg-primary) !important;
-        }
-        .gantt_cell {
-            border-color: var(--gantt-border) !important;
-            color: var(--text-primary) !important;
-        }
-        .gantt_task_cell {
-            border-color: var(--gantt-border) !important;
-        }
-        .gantt_row.odd { background-color: var(--gantt-row-alt) !important; }
-        .gantt_row:hover, .gantt_row.odd:hover { background-color: var(--gantt-cell-hover) !important; }
-        .gantt_task_row.odd { background-color: var(--gantt-row-alt) !important; }
-        .gantt_task_row:hover, .gantt_task_row.odd:hover { background-color: var(--gantt-cell-hover) !important; }
-        .gantt_grid_head_cell, .gantt_scale_cell {
-            background: var(--gantt-header) !important;
-            color: var(--gantt-header-text) !important;
-            border-color: var(--gantt-border) !important;
-        }
-        .gantt_grid_scale, .gantt_task_scale {
-            background: var(--gantt-header) !important;
-            border-color: var(--gantt-border) !important;
-        }
-        .gantt_hor_layer, .gantt_ver_layer { background-color: var(--accent) !important; }
-        .gantt_grid_data .gantt_row.selected, .gantt_grid_data .gantt_row.odd.selected {
-            background: var(--accent) !important;
-            color: var(--accent-text) !important;
-        }
-        /* Lightbox / modal theming */
-        .gantt_cal_light, .gantt_cal_light_wide {
-            background: var(--bg-elevated) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-            box-shadow: 0 4px 20px var(--shadow-strong);
-        }
-        .gantt_cal_light .gantt_cal_ltitle {
-            background: var(--gantt-header) !important;
-            color: var(--gantt-header-text) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-        }
-        .gantt_cal_light .gantt_cal_larea {
-            background: var(--bg-elevated) !important;
-            color: var(--text-primary) !important;
-        }
-        .gantt_cal_light input, .gantt_cal_light select, .gantt_cal_light textarea {
-            background: var(--input-bg) !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--input-border) !important;
-        }
-        .gantt_cal_light .gantt_btn_set {
-            background: var(--bg-secondary) !important;
-            border-top: 1px solid var(--border-color) !important;
-        }
-        .gantt_tooltip {
-            background: var(--tooltip-bg) !important;
-            color: var(--tooltip-text) !important;
-            border: none !important;
-            box-shadow: 0 2px 8px var(--shadow);
-        }
-
-        /* Theme-aware scrollbar (webKit) */
-        .gantt_hor_scrollbar div, .gantt_ver_scrollbar div {
-            background: var(--bg-tertiary) !important;
-        }
-        .gantt_hor_scrollbar .gantt_scroll_thumb, .gantt_ver_scrollbar .gantt_scroll_thumb {
-            background: var(--border-color) !important;
-        }
-
         .color-picker-container {
             display: flex; align-items: center; padding: 5px 10px; height: 30px;
         }
         .color-picker-container input {
-            width: 100%; height: 25px; border: 1px solid var(--input-border); cursor: pointer; background: none;
-            border-radius: 4px;
+            width: 100%; height: 25px; border: 1px solid var(--border); cursor: pointer; background: var(--bg-raised);
         }
 
         .today {
-            background: none; 
-            border-left: 2px dotted var(--today-line); 
-            width: 0 !important; 
+            background: none !important;
+            border-left: 2px dotted var(--accent) !important;
+            width: 0 !important;
+            box-shadow: 0 0 10px var(--accent);
         }
 
         .zoom-controls {
@@ -401,108 +416,388 @@
             width: 46px; height: 46px; border-radius: 50%;
             padding: 0; font-size: 1.25rem; line-height: 1;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 3px 10px var(--shadow-strong);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+            background: var(--bg-raised);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+        }
+        .zoom-controls button:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
         }
         .zoom-label {
-            background: var(--bg-elevated); border: 1px solid var(--border-color); color: var(--text-secondary);
+            background: var(--bg-raised);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
             border-radius: 10px; padding: 2px 8px; font-size: 0.68rem; font-weight: 500;
-            text-transform: uppercase; letter-spacing: 0.4px;
-            box-shadow: 0 1px 4px var(--shadow);
+            text-transform: uppercase; letter-spacing: 0.1em;
+            font-family: var(--font-mono);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12);
         }
 
         #linkEditorModal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--modal-bg); z-index: 1000; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
             padding: 16px; box-sizing: border-box;
+            backdrop-filter: blur(4px);
         }
         #linkEditorModal.show { display: flex; }
         .link-editor-content {
-            background: var(--bg-elevated); padding: 20px; border-radius: 8px;
+            background: var(--bg-panel);
+            padding: 20px; border-radius: 4px;
             width: 400px; max-width: 100%;
             max-height: calc(100vh - 40px); overflow-y: auto;
-            box-shadow: 0 4px 12px var(--shadow-strong);
+            box-shadow: var(--shadow-glow), 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-strong);
             box-sizing: border-box;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
+            color: var(--text);
+            font-family: var(--font-body);
         }
-        .link-editor-content h3 { margin: 0 0 15px 0; color: var(--text-primary); }
+        .link-editor-content h3 {
+            margin: 0 0 15px 0; color: var(--text);
+            font-family: var(--font-display);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
         .link-editor-row { margin-bottom: 15px; }
-        .link-editor-row label { display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-secondary); }
+        .link-editor-row label {
+            display: block; margin-bottom: 5px;
+            color: var(--text-dim);
+            font-family: var(--font-display);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
         .link-editor-row input, .link-editor-row select {
-            width: 100%; padding: 10px 8px; border: 1px solid var(--input-border); border-radius: 4px;
-            box-sizing: border-box; background: var(--input-bg); color: var(--text-primary);
+            width: 100%; padding: 10px 8px;
+            background: var(--bg-raised);
+            color: var(--text);
+            border: 1px solid var(--border); border-radius: 3px;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+        }
+        .link-editor-row input:focus, .link-editor-row select:focus {
+            outline: none;
+            border-color: var(--accent);
         }
         .link-editor-buttons { display: flex; gap: 10px; margin-top: 20px; }
         .link-editor-buttons button { flex: 1; }
-        .btn-delete { background: var(--danger) !important; }
+        .btn-delete {
+            color: var(--accent-3) !important;
+            border-color: var(--accent-3) !important;
+            background: transparent !important;
+        }
+        .btn-delete:hover {
+            background: var(--accent-3) !important;
+            color: var(--bg) !important;
+        }
 
         .save-indicator {
             position: fixed;
             bottom: calc(80px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%) translateY(20px);
-            background: var(--tooltip-bg);
-            color: var(--tooltip-text);
+            background: var(--bg-panel);
+            color: var(--text);
             padding: 8px 18px;
             border-radius: 20px;
             font-size: 0.8rem;
             opacity: 0;
-            transition: opacity 0.3s, transform 0.3s, background-color 0.25s, color 0.25s;
+            transition: opacity 0.3s, transform 0.3s;
             z-index: 9999;
             pointer-events: none;
+            border: 1px solid var(--border-strong);
+            box-shadow: var(--shadow-glow);
+            font-family: var(--font-mono);
         }
         .save-indicator.visible {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Theme picker dropdown */
-        .theme-picker-wrapper {
-            position: relative;
-            display: inline-block;
+        /* ==========================================================
+           DHTMLX GANTT THEME OVERRIDES
+           ========================================================== */
+
+        /* Grid (left panel) */
+        .gantt_grid {
+            background: var(--bg-surface) !important;
         }
-        .theme-picker-dropdown {
-            display: none;
-            position: absolute;
-            top: calc(100% + 6px);
-            right: 0;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            box-shadow: 0 4px 16px var(--shadow-strong);
-            min-width: 180px;
-            z-index: 100;
-            overflow: hidden;
+        .gantt_grid_scale {
+            background: var(--bg-raised) !important;
+            border-bottom: 1px solid var(--border) !important;
         }
-        .theme-picker-dropdown.show { display: block; }
-        .theme-picker-dropdown button {
-            width: 100%;
-            background: transparent;
-            color: var(--text-primary);
-            border: none;
-            border-radius: 0;
-            padding: 10px 14px;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            transition: background 0.15s;
+        .gantt_grid_head_cell {
+            color: var(--text-dim) !important;
+            background: var(--bg-raised) !important;
+            border-color: var(--border) !important;
+            font-family: var(--font-display) !important;
+            font-weight: 600 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem !important;
         }
-        .theme-picker-dropdown button:hover {
-            background: var(--bg-tertiary);
+        .gantt_grid_data {
+            background: var(--bg-surface) !important;
         }
-        .theme-picker-dropdown button.active-theme {
-            background: var(--gantt-cell-hover);
+        .gantt_row {
+            background: var(--bg-surface) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+        .gantt_row.odd {
+            background: var(--bg-surface) !important;
+        }
+        .gantt_row:hover {
+            background: var(--bg-raised) !important;
+        }
+        .gantt_cell {
+            color: var(--text) !important;
+            border-right-color: var(--border) !important;
+            font-family: var(--font-body) !important;
+        }
+        .gantt_row.gantt_selected {
+            background: var(--selected-bg) !important;
+        }
+        .gantt_row.gantt_selected .gantt_cell {
+            color: var(--accent) !important;
             font-weight: 600;
         }
-        .theme-picker-dropdown button.active-theme::after {
-            content: "✓";
-            margin-left: auto;
-            color: var(--accent);
-            font-weight: bold;
+
+        /* Timeline */
+        .gantt_task {
+            background: var(--bg-surface) !important;
+        }
+        .gantt_task_scale {
+            background: var(--bg-raised) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+        .gantt_scale_line {
+            background: var(--bg-raised) !important;
+            border-bottom: 1px solid var(--border) !important;
+            color: var(--text-dim) !important;
+            font-family: var(--font-display) !important;
+            font-weight: 500 !important;
+        }
+        .gantt_head_cell {
+            border-color: var(--border) !important;
+            color: var(--text-dim) !important;
+            background: var(--bg-raised) !important;
+        }
+        .gantt_task_cell {
+            border-right-color: var(--border) !important;
+            background: var(--bg-surface) !important;
+        }
+        .gantt_task_cell.weekend {
+            background: var(--weekend-bg) !important;
         }
 
+        /* Task bars — NOTE: color removed so inline style (textColor) from DHTMLX wins */
+        .gantt_task_line {
+            background: var(--task-default) !important;
+            border-color: transparent !important;
+            border-radius: 3px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+        }
+        .gantt_task_line.gantt_project {
+            background: var(--task-project) !important;
+        }
+        .gantt_task_line.gantt_milestone {
+            background: var(--task-milestone) !important;
+        }
+        .gantt_task_content {
+            /* No color rule here — DHTMLX injects inline style from task.textColor */
+            font-family: var(--font-body) !important;
+            font-size: 0.8rem !important;
+            font-weight: 500 !important;
+            text-shadow: var(--task-text-shadow) !important;
+        }
+        .gantt_task_progress {
+            background-color: rgba(0, 0, 0, 0.25) !important;
+        }
+
+        /* Links */
+        .gantt_task_link .gantt_link_line_right,
+        .gantt_task_link .gantt_link_line_left,
+        .gantt_task_link .gantt_link_line_top,
+        .gantt_task_link .gantt_link_line_bottom {
+            background-color: var(--link-default) !important;
+        }
+        .gantt_link_arrow {
+            border-color: transparent transparent transparent var(--link-default) !important;
+        }
+
+        /* ==========================================================
+           FIX: Link connection circles — transparent with border only
+           ========================================================== */
+        .gantt_link_control {
+            background: transparent !important;
+            border: 2px solid var(--accent) !important;
+            box-sizing: border-box !important;
+        }
+        .gantt_link_control_outer {
+            background: transparent !important;
+            border-color: var(--accent) !important;
+        }
+        .gantt_link_cross {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+        }
+
+        /* Lightbox */
+        .gantt_cal_light,
+        .gantt_cal_light_wide {
+            background: var(--bg-panel) !important;
+            border: 1px solid var(--border-strong) !important;
+            box-shadow: var(--shadow-glow), 0 20px 60px rgba(0,0,0,0.5) !important;
+            border-radius: 4px !important;
+            font-family: var(--font-body) !important;
+            color: var(--text) !important;
+        }
+        .gantt_cal_ltitle {
+            background: var(--bg-raised) !important;
+            color: var(--text) !important;
+            border-bottom: 1px solid var(--border) !important;
+            font-family: var(--font-display) !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.02em;
+        }
+        .gantt_cal_ltitle span {
+            color: var(--text) !important;
+        }
+        .gantt_cal_larea {
+            background: var(--bg-panel) !important;
+            border-color: var(--border) !important;
+            color: var(--text) !important;
+        }
+        .gantt_cal_lsection {
+            color: var(--text-dim) !important;
+            font-family: var(--font-display) !important;
+            font-weight: 500 !important;
+            text-transform: uppercase;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.05em;
+        }
+        .gantt_cal_light select,
+        .gantt_cal_light input,
+        .gantt_cal_light textarea {
+            background: var(--bg-raised) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text) !important;
+            font-family: var(--font-body) !important;
+        }
+        .gantt_cal_light select:focus,
+        .gantt_cal_light input:focus,
+        .gantt_cal_light textarea:focus {
+            border-color: var(--accent) !important;
+            outline: none;
+        }
+        .gantt_btn {
+            background: var(--bg-raised) !important;
+            border: 1px solid var(--border) !important;
+            color: var(--text) !important;
+            font-family: var(--font-display) !important;
+            font-weight: 500 !important;
+            padding: 6px 16px !important;
+            border-radius: 3px !important;
+            cursor: pointer !important;
+            transition: all 0.2s !important;
+        }
+        .gantt_btn:hover {
+            background: var(--accent) !important;
+            color: var(--bg) !important;
+            border-color: var(--accent) !important;
+        }
+        .gantt_btn_set {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: var(--bg) !important;
+        }
+        .gantt_btn_set:hover {
+            filter: brightness(1.1) !important;
+        }
+        .gantt_close_lightbox {
+            color: var(--text-faint) !important;
+        }
+        .gantt_close_lightbox:hover {
+            color: var(--accent-3) !important;
+        }
+
+        /* Tooltip */
+        .gantt_tooltip {
+            background: var(--bg-panel) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--border-strong) !important;
+            box-shadow: var(--shadow-glow) !important;
+            font-family: var(--font-body) !important;
+            padding: 8px 12px !important;
+            border-radius: 3px !important;
+        }
+        .gantt_tooltip_header {
+            color: var(--text) !important;
+            font-weight: 600;
+        }
+        .gantt_tooltip_body {
+            color: var(--text-dim) !important;
+        }
+
+        /* Scrollbar */
+        .gantt_ver_scroll,
+        .gantt_hor_scroll {
+            background: var(--bg-surface) !important;
+        }
+        ::-webkit-scrollbar {
+            background: var(--bg-surface);
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-surface);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border: 2px solid var(--bg-surface);
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-strong);
+        }
+        ::-webkit-scrollbar-corner {
+            background: var(--bg-surface);
+        }
+
+        /* Drag handles */
+        .gantt_grid_resize_handle,
+        .gantt_task_resize_handle {
+            background: var(--accent) !important;
+        }
+        .gantt_task_drag {
+            border-color: var(--accent) !important;
+        }
+        .gantt_task_progress_drag {
+            background-color: var(--accent) !important;
+        }
+
+        /* ==========================================================
+           LIGHT THEME SPECIFIC ADJUSTMENTS
+           ========================================================== */
+        [data-theme="light"] .gantt_task_line {
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+        }
+        [data-theme="light"] .today {
+            box-shadow: none !important;
+        }
+        [data-theme="light"] button.secondary:hover {
+            background: rgba(2, 136, 209, 0.05);
+        }
+        [data-theme="light"] .save-indicator {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* ==========================================================
+           RESPONSIVE
+           ========================================================== */
         @media (max-width: 1000px) {
             .instruction { display: none; }
         }
@@ -524,7 +819,7 @@
             .controls h2 { flex: 1 1 100%; font-size: 1rem; }
             .toolbar-right { width: 100%; }
             button { padding: 10px 12px; font-size: 0.85rem; min-height: 42px; }
-            .theme-btn .theme-name { display: none; } /* Hide text on mobile, show only emoji */
+            .theme-select { padding: 10px 32px 10px 12px; font-size: 0.85rem; }
         }
     </style>
     <style id="dynamic-link-styles"></style>
@@ -532,33 +827,24 @@
 <body>
 
 <div class="controls">
-    <h2>IGEV - Intuitive Gantt Editor and Viewer</h2>
+    <h2>IGEV — Intuitive Gantt Editor</h2>
     <div class="toolbar-right">
         <div class="instruction">
             Header Wheel: ↔️ Time only | Body Wheel: ↔️ Time + ↕️ Height | Touch: pinch to zoom
         </div>
         <input type="file" id="fileInput" accept=".json">
-        <input type="color" id="linkColorInput"> 
-        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Show/hide the task list">📋 Hide List</button>
-        <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap tasks to grid units when dragging">🧲 Snap: Off</button>
-        
-        <!-- THEME PICKER -->
-        <div class="theme-picker-wrapper">
-            <button class="secondary theme-btn" id="themeToggleBtn" onclick="toggleThemePicker(event)" title="Change theme">
-                <span id="themeIcon">☀️</span>
-                <span class="theme-name" id="themeName">Light</span>
-            </button>
-            <div class="theme-picker-dropdown" id="themePickerDropdown">
-                <button data-theme="light" onclick="applyTheme('light')">☀️ Light</button>
-                <button data-theme="dark" onclick="applyTheme('dark')">🌙 Dark</button>
-                <button data-theme="material" onclick="applyTheme('material')">🎨 Material</button>
-                <button data-theme="contrast" onclick="applyTheme('contrast')">♿ High Contrast</button>
-            </div>
-        </div>
-
-        <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
+        <input type="color" id="linkColorInput">
+        <select id="themeSelector" class="theme-select" title="Change theme">
+            <option value="void">🌌 Void</option>
+            <option value="light">☀️ Light</option>
+            <option value="amber">🔶 Amber</option>
+            <option value="matrix">💚 Matrix</option>
+        </select>
+        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Show/hide task list">📋 List</button>
+        <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap tasks to grid units">🧲 Snap: Off</button>
+        <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load</button>
         <button onclick="saveData()">💾 Export</button>
-        <button class="danger" onclick="clearSavedState()" title="Clear all locally saved data and start fresh">🗑️ Reset</button>
+        <button class="danger" onclick="clearSavedState()" title="Clear all saved data">🗑️ Reset</button>
     </div>
 </div>
 
@@ -598,101 +884,50 @@
 
 <script>
     // ===================================================================
-    // THEME DEFINITIONS
+    // THEME MANAGEMENT
     // ===================================================================
-    const themes = {
-        light: {
-            name: "Light",
-            icon: "☀️",
-            skin: "dhtmlxgantt.css",
-            bodyClass: "theme-light"
-        },
-        dark: {
-            name: "Dark",
-            icon: "🌙",
-            skin: "dhtmlxgantt.css", // Uses CSS variables for full dark override
-            bodyClass: "theme-dark"
-        },
-        material: {
-            name: "Material",
-            icon: "🎨",
-            skin: "dhtmlxgantt_material.css",
-            bodyClass: "theme-material"
-        },
-        contrast: {
-            name: "High Contrast",
-            icon: "♿",
-            skin: "dhtmlxgantt_contrast_black.css",
-            bodyClass: "theme-contrast"
-        }
+    const THEME_DEFAULTS = {
+        void:   { task: '#4fe3d2', project: '#7bf0a4', milestone: '#ff5c86', link: '#ffb648', text: '#ffffff' },
+        light:  { task: '#3db9d3', project: '#4caf50', milestone: '#e91e63', link: '#ffa011', text: '#ffffff' },
+        amber:  { task: '#ffaa00', project: '#ffee88', milestone: '#ff6600', link: '#ffdd00', text: '#000000' },
+        matrix: { task: '#00ff41', project: '#aaffaa', milestone: '#00aa00', link: '#88ff88', text: '#000000' }
     };
 
-    let currentTheme = "light";
+    function getCurrentTheme() {
+        return document.documentElement.getAttribute('data-theme') || 'void';
+    }
+    function getThemeColor(key) {
+        const t = getCurrentTheme();
+        return (THEME_DEFAULTS[t] && THEME_DEFAULTS[t][key]) || THEME_DEFAULTS.void[key];
+    }
 
-    function applyTheme(themeName, save = true) {
-        if (!themes[themeName]) themeName = "light";
-        currentTheme = themeName;
-        const theme = themes[themeName];
-
-        // 1. Update body class
-        document.body.className = theme.bodyClass;
-
-        // 2. Update the DHTMLX Gantt skin stylesheet
-        const skinLink = document.getElementById('ganttSkinLink');
-        const newHref = `https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/${theme.skin}`;
-        if (skinLink.href !== newHref) {
-            skinLink.href = newHref;
-        }
-
-        // 3. Update the theme button UI
-        document.getElementById('themeIcon').textContent = theme.icon;
-        document.getElementById('themeName').textContent = theme.name;
-
-        // 4. Highlight active theme in dropdown
-        document.querySelectorAll('.theme-picker-dropdown button').forEach(btn => {
-            if (btn.dataset.theme === themeName) btn.classList.add('active-theme');
-            else btn.classList.remove('active-theme');
-        });
-
-        // 5. Close the dropdown
-        document.getElementById('themePickerDropdown').classList.remove('show');
-
-        // 6. Re-render gantt to apply skin changes
+    function setTheme(name) {
+        if (!THEME_DEFAULTS[name]) name = 'void';
+        document.documentElement.setAttribute('data-theme', name);
+        try { localStorage.setItem('igev_theme', name); } catch(e) {}
+        const sel = document.getElementById('themeSelector');
+        if (sel) sel.value = name;
         if (typeof gantt !== 'undefined' && gantt.$task) {
-            // Force a full re-render
-            setTimeout(() => {
-                gantt.render();
-                restoreSearchInput();
-            }, 50);
+            gantt.render();
+            restoreSearchInput();
         }
-
-        // 7. Save to storage
-        if (save) scheduleSave();
     }
 
-    function toggleThemePicker(event) {
-        if (event) event.stopPropagation();
-        const dropdown = document.getElementById('themePickerDropdown');
-        dropdown.classList.toggle('show');
-    }
-
-    // Close theme picker when clicking elsewhere
-    document.addEventListener('click', function(e) {
-        const dropdown = document.getElementById('themePickerDropdown');
-        const btn = document.getElementById('themeToggleBtn');
-        if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
-            dropdown.classList.remove('show');
-        }
-    });
+    (function() {
+        var sel = document.getElementById('themeSelector');
+        if (sel) sel.value = getCurrentTheme();
+        if (sel) sel.addEventListener('change', function() { setTheme(this.value); });
+    })();
 
     // ===================================================================
-    // LOCAL STORAGE PERSISTENCE MODULE
+    // LOCAL STORAGE PERSISTENCE
     // ===================================================================
     const STORAGE_KEY = 'igev_gantt_state';
     let saveTimeout = null;
 
     function showSaveIndicator() {
         const el = document.getElementById('saveIndicator');
+        if (!el) return;
         el.classList.add('visible');
         setTimeout(() => el.classList.remove('visible'), 1500);
     }
@@ -701,7 +936,7 @@
         try {
             const scrollState = gantt.getScrollState();
             const state = {
-                version: 4, // bumped for theme state
+                version: 4,
                 timestamp: Date.now(),
                 data: gantt.serialize(),
                 zoomIndex: currentZoomIndex,
@@ -711,12 +946,12 @@
                 scrollX: scrollState.x || 0,
                 scrollY: scrollState.y || 0,
                 snapEnabled: snapEnabled,
-                theme: currentTheme
+                theme: getCurrentTheme()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             if (showToast) showSaveIndicator();
         } catch (e) {
-            console.warn('Failed to save state to localStorage:', e);
+            console.warn('Failed to save state:', e);
         }
     }
 
@@ -728,7 +963,7 @@
             if (!state || !state.data || !state.data.data) return null;
             return state;
         } catch (e) {
-            console.warn('Failed to load state from localStorage:', e);
+            console.warn('Failed to load state:', e);
             return null;
         }
     }
@@ -736,6 +971,7 @@
     function clearSavedState() {
         if (confirm('Clear all saved progress and start fresh?')) {
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('igev_theme');
             location.reload();
         }
     }
@@ -746,22 +982,22 @@
     }
 
     // ===================================================================
-    // DEVICE DETECTION HELPERS
+    // DEVICE DETECTION
     // ===================================================================
     const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
 
     // ===================================================================
-    // CUSTOM COLOR PICKER
+    // CUSTOM COLOR PICKER (theme-aware defaults)
     // ===================================================================
     gantt.form_blocks["color_picker"] = {
         render: function (sns) {
             return "<div class='color-picker-container'><input type='color'></div>";
         },
         set_value: function (node, value, task) {
-            let defaultColor = "#3db9d3";
-            if (task.type === "milestone") defaultColor = "#e91e63";
-            if (task.type === "project") defaultColor = "#4caf50";
+            let defaultColor = getThemeColor('task');
+            if (task.type === "milestone") defaultColor = getThemeColor('milestone');
+            if (task.type === "project") defaultColor = getThemeColor('project');
             node.querySelector("input").value = value || defaultColor;
         },
         get_value: function (node, task) { return node.querySelector("input").value; },
@@ -769,14 +1005,14 @@
     };
 
     // ===================================================================
-    // TOUCH SUPPORT CONFIG
+    // TOUCH SUPPORT
     // ===================================================================
     gantt.config.touch = true;
     gantt.config.touch_drag = true;
     gantt.config.touch_feedback = true;
 
     // ===================================================================
-    // MAGNETISM / SNAP STATE
+    // MAGNETISM / SNAP
     // ===================================================================
     let snapEnabled = false;
 
@@ -853,9 +1089,9 @@
     gantt.config.lightbox.milestone_sections = [
         {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
-        {name: "task_color", height: 30, map_to: "color", type: "color_picker"}, 
+        {name: "task_color", height: 30, map_to: "color", type: "color_picker"},
         {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"},
-        {name: "time", height: 72, type: "duration", map_to: "auto", single_date: true} 
+        {name: "time", height: 72, type: "duration", map_to: "auto", single_date: true}
     ];
 
     gantt.config.date_format = "%Y-%m-%d %H:%i";
@@ -863,16 +1099,16 @@
     gantt.templates.timeline_cell_class = (task, date) => (date.getDay()==0||date.getDay()==6) ? "weekend" : "";
     gantt.templates.link_class = (link) => "link_id_" + link.id;
 
-    gantt.plugins({ 
-        tooltip: true, 
-        drag_timeline: true, 
-        marker: true 
+    gantt.plugins({
+        tooltip: true,
+        drag_timeline: true,
+        marker: true
     });
 
     gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
 
     // ===================================================================
-    // SEARCH STATE
+    // SEARCH
     // ===================================================================
     let currentSearch = "";
     function restoreSearchInput() {
@@ -881,7 +1117,7 @@
     }
 
     // ===================================================================
-    // CUSTOM ZOOM LEVELS
+    // ZOOM
     // ===================================================================
     const zoomLevels = [
         { name: "year", scale_height: 60, row_height: 25, min_column_width: 30, scales: [{unit: "year", step: 1, format: "%Y"}]},
@@ -892,7 +1128,7 @@
     ];
 
     let currentZoomIndex = 2;
-    let activeRowHeight = zoomLevels[currentZoomIndex].row_height; 
+    let activeRowHeight = zoomLevels[currentZoomIndex].row_height;
 
     function updateZoomLabel() {
         const labelEl = document.getElementById('zoomLabel');
@@ -968,7 +1204,7 @@
         gantt.addMarker({
             start_date: new Date(),
             css: "today",
-            title: "Today: " + date_to_str(new Date()) 
+            title: "Today: " + date_to_str(new Date())
         });
     }
 
@@ -989,7 +1225,8 @@
     }
     function updateGridToggleBtn() {
         const btn = document.getElementById('gridToggleBtn');
-        if (btn) btn.innerHTML = gantt.config.show_grid ? "📋 Hide List" : "📋 Show List";
+        if (btn) btn.innerHTML = gantt.config.show_grid ? "📋 List" : "📋 List";
+        if (btn) btn.title = gantt.config.show_grid ? "Hide task list" : "Show task list";
     }
     updateGridToggleBtn();
 
@@ -1017,15 +1254,15 @@
             if(!items) return;
             items.forEach(item => {
                 const currentId = item.TaskID || item.id;
-                
+
                 let elemType = item.type;
                 if (!elemType) {
                     elemType = (item.Duration === 0 || item.duration === 0) ? "milestone" : "task";
                 }
 
-                let finalColor = "#3db9d3";
-                if (elemType === "milestone") finalColor = "#e91e63";
-                if (elemType === "project") finalColor = "#4caf50";
+                let finalColor = getThemeColor('task');
+                if (elemType === "milestone") finalColor = getThemeColor('milestone');
+                if (elemType === "project") finalColor = getThemeColor('project');
 
                 if(item.color) {
                     if(item.color.startsWith("#")) finalColor = item.color;
@@ -1042,13 +1279,13 @@
                     progress: (item.Progress || item.progress || 0) / 100,
                     type: elemType,
                     color: finalColor,
-                    textColor: item.textColor || "#ffffff"
+                    textColor: item.textColor || getThemeColor('text')
                 });
 
                 if (item.Predecessor) {
                     const sourceId = parseInt(item.Predecessor);
                     if (!isNaN(sourceId)) {
-                        links.push({ id: linkIdCounter++, source: sourceId, target: currentId, type: "0", color: "#ffa011" });
+                        links.push({ id: linkIdCounter++, source: sourceId, target: currentId, type: "0", color: item.PredecessorColor || getThemeColor('link') });
                     }
                 }
                 if (item.subtasks) recurse(item.subtasks, currentId);
@@ -1094,7 +1331,7 @@
     function openLinkEditor(linkId) {
         const link = gantt.getLink(linkId);
         currentEditingLinkId = linkId;
-        document.getElementById('linkEditorColor').value = link.color || "#ffa011";
+        document.getElementById('linkEditorColor').value = link.color || getThemeColor('link');
         document.getElementById('linkEditorType').value = link.type || "0";
         document.getElementById('linkEditorModal').classList.add('show');
     }
@@ -1181,7 +1418,7 @@
         const query = inputEl ? inputEl.value.toLowerCase().trim() : "";
         if(query === "") return true;
         if(task.text.toLowerCase().includes(query)) return true;
-        
+
         function hasMatchingChild(taskId) {
             const children = gantt.getChildren(taskId);
             for(let i = 0; i < children.length; i++) {
@@ -1204,7 +1441,7 @@
     });
 
     // ===================================================================
-    // PERSISTENCE: AUTO-SAVE ON DATA CHANGES
+    // AUTO-SAVE
     // ===================================================================
     gantt.attachEvent("onAfterTaskAdd", function(id, task) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskUpdate", function(id, task) { scheduleSave(); });
@@ -1219,17 +1456,17 @@
     });
 
     // ===================================================================
-    // FILE IO + LOCAL STORAGE RESTORE
+    // FILE IO + RESTORE
     // ===================================================================
     window.addEventListener('load', () => {
         const savedState = loadStateFromStorage();
+
+        if (savedState && savedState.theme) {
+            setTheme(savedState.theme);
+        }
+
         if (savedState) {
             console.log('Restoring saved state from', new Date(savedState.timestamp).toLocaleString());
-            
-            // Restore theme FIRST (must be applied before other state)
-            if (savedState.theme && themes[savedState.theme]) {
-                applyTheme(savedState.theme, false);
-            }
 
             if (savedState.snapEnabled !== undefined) {
                 snapEnabled = !!savedState.snapEnabled;
@@ -1275,9 +1512,6 @@
             return;
         }
 
-        // No saved state: apply default Light theme
-        applyTheme("light", false);
-
         fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
             if(data) {
                 gantt.parse(processGanttData(data));
@@ -1290,13 +1524,13 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
             try {
-                gantt.clearAll(); 
+                gantt.clearAll();
                 document.getElementById('dynamic-link-styles').innerText = "";
                 currentSearch = "";
                 const searchEl = document.querySelector('.search-header-input');
                 if(searchEl) searchEl.value = "";
-                
-                reinitTodayMarker(); 
+
+                reinitTodayMarker();
                 gantt.parse(processGanttData(JSON.parse(ev.target.result)));
                 rebuildAllLinkStyles();
                 setTimeout(() => saveStateToStorage(true), 300);
@@ -1326,14 +1560,14 @@
         if (isTimelineContainer && !isGrid) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             const now = Date.now();
-            if (now - lastZoomTime < 60) return false; 
+            if (now - lastZoomTime < 60) return false;
             lastZoomTime = now;
 
             const taskRect = gantt.$task.getBoundingClientRect();
-            const offsetY = event.clientY - taskRect.top; 
-            const headerHeight = gantt.config.scale_height || 60; 
+            const offsetY = event.clientY - taskRect.top;
+            const headerHeight = gantt.config.scale_height || 60;
             const isHeader = offsetY < headerHeight;
 
             const nextIndex = event.deltaY < 0 ? currentZoomIndex + 1 : currentZoomIndex - 1;
