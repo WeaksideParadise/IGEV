@@ -2,15 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- MOBILE: prevent native pinch-zoom so pinch gestures control the Gantt zoom instead -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IGEV - Intuitive Gantt Editor and Viewer</title>
 
-    <!-- DHTMLX Gantt Library -->
     <script src="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
 
-    <!-- Fonts -->
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/300.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/400.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/500.css" rel="stylesheet">
@@ -64,6 +61,15 @@
         button.add-btn:hover { background-color: #1b5e20; }
         button.danger { background-color: #d32f2f; }
         button.danger:hover { background-color: #b71c1c; }
+
+        /* Magnetism button: visual state for ON */
+        button.magnet-on {
+            background-color: #ff9800 !important;
+            color: white !important;
+            border-color: #ef6c00 !important;
+            font-weight: 500;
+        }
+        button.magnet-on:hover { background-color: #f57c00 !important; }
 
         #fileInput, #linkColorInput { display: none; }
 
@@ -176,7 +182,6 @@
         .link-editor-buttons button { flex: 1; }
         .btn-delete { background: #d32f2f !important; }
 
-        /* Save indicator toast */
         .save-indicator {
             position: fixed;
             bottom: calc(80px + env(safe-area-inset-bottom));
@@ -232,7 +237,8 @@
         </div>
         <input type="file" id="fileInput" accept=".json">
         <input type="color" id="linkColorInput"> 
-        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()">📋 Hide List</button>
+        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Show/hide the task list">📋 Hide List</button>
+        <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap tasks to grid units when dragging">🧲 Snap: Off</button>
         <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
         <button onclick="saveData()">💾 Export</button>
         <button class="danger" onclick="clearSavedState()" title="Clear all locally saved data and start fresh">🗑️ Reset</button>
@@ -241,17 +247,14 @@
 
 <div id="gantt_here"></div>
 
-<!-- MOBILE: on-screen zoom controls -->
 <div class="zoom-controls">
     <button id="zoomInBtn" aria-label="Zoom in" title="Zoom in">＋</button>
     <span class="zoom-label" id="zoomLabel">month</span>
     <button id="zoomOutBtn" aria-label="Zoom out" title="Zoom out">－</button>
 </div>
 
-<!-- Save indicator toast -->
 <div class="save-indicator" id="saveIndicator">✓ Progress saved</div>
 
-<!-- Link Editor Modal -->
 <div id="linkEditorModal">
     <div class="link-editor-content">
         <h3>Edit Dependency</h3>
@@ -293,7 +296,7 @@
         try {
             const scrollState = gantt.getScrollState();
             const state = {
-                version: 2,
+                version: 3, // bumped for magnet state
                 timestamp: Date.now(),
                 data: gantt.serialize(),
                 zoomIndex: currentZoomIndex,
@@ -301,7 +304,8 @@
                 showGrid: gantt.config.show_grid,
                 searchText: currentSearch,
                 scrollX: scrollState.x || 0,
-                scrollY: scrollState.y || 0
+                scrollY: scrollState.y || 0,
+                snapEnabled: snapEnabled
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             if (showToast) showSaveIndicator();
@@ -330,14 +334,13 @@
         }
     }
 
-    // Debounced save (waits 800ms after last change before writing)
     function scheduleSave() {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => saveStateToStorage(true), 800);
     }
 
     // ===================================================================
-    // DEVICE DETECTION HELPERS (MOBILE)
+    // DEVICE DETECTION HELPERS
     // ===================================================================
     const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
@@ -360,11 +363,47 @@
     };
 
     // ===================================================================
-    // TOUCH SUPPORT CONFIG (MOBILE)
+    // TOUCH SUPPORT CONFIG
     // ===================================================================
     gantt.config.touch = true;
     gantt.config.touch_drag = true;
     gantt.config.touch_feedback = true;
+
+    // ===================================================================
+    // MAGNETISM / SNAP STATE
+    // Defaults to OFF (deactivated) as requested.
+    // ===================================================================
+    let snapEnabled = false;
+
+    function applyMagnetismState() {
+        gantt.config.round_dnd_dates = snapEnabled;   // drag & resize snapping
+        gantt.config.round_task_dates = snapEnabled;   // general task date rounding
+    }
+
+    function toggleMagnetism(forceState) {
+        const target = (forceState === undefined) ? !snapEnabled : forceState;
+        snapEnabled = !!target;
+        applyMagnetismState();
+        updateMagnetBtn();
+        scheduleSave();
+    }
+
+    function updateMagnetBtn() {
+        const btn = document.getElementById('magnetToggleBtn');
+        if (!btn) return;
+        if (snapEnabled) {
+            btn.innerHTML = '🧲 Snap: On';
+            btn.classList.add('magnet-on');
+            btn.classList.remove('secondary');
+        } else {
+            btn.innerHTML = '🧲 Snap: Off';
+            btn.classList.remove('magnet-on');
+            btn.classList.add('secondary');
+        }
+    }
+
+    // Apply default state BEFORE gantt.init()
+    applyMagnetismState();
 
     // ===================================================================
     // CONFIGURATION
@@ -388,7 +427,6 @@
     ganttColumns.push({ name: "add", width: isSmallScreen ? 38 : 44 });
     gantt.config.columns = ganttColumns;
 
-    // --- LIGHTBOX SECTIONS ---
     gantt.locale.labels.section_type = "Element Type";
     gantt.locale.labels.section_task_color = "Item Color";
     gantt.locale.labels.section_text_color = "Label Color";
@@ -421,7 +459,6 @@
     gantt.templates.timeline_cell_class = (task, date) => (date.getDay()==0||date.getDay()==6) ? "weekend" : "";
     gantt.templates.link_class = (link) => "link_id_" + link.id;
 
-    // --- ENABLE MARKER PLUGIN ---
     gantt.plugins({ 
         tooltip: true, 
         drag_timeline: true, 
@@ -450,7 +487,7 @@
         { name: "day", scale_height: 60, row_height: 60, min_column_width: 80, scales: [{unit: "month", format: "%M %Y"}, {unit: "day", step: 1, format: "%d %M"}]}
     ];
 
-    let currentZoomIndex = 2; // Start at 'month'
+    let currentZoomIndex = 2;
     let activeRowHeight = zoomLevels[currentZoomIndex].row_height; 
 
     function updateZoomLabel() {
@@ -504,10 +541,9 @@
         }
 
         gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
-        scheduleSave(); // Save zoom + scroll state
+        scheduleSave();
     }
 
-    // MOBILE: start without the tree panel on very small screens
     if (window.innerWidth < 560) {
         gantt.config.show_grid = false;
     }
@@ -523,7 +559,6 @@
     }
     initManualZoom();
 
-    // --- MARKER HELPER FUNCTION ---
     function reinitTodayMarker() {
         const date_to_str = gantt.date.date_to_str(gantt.config.task_date);
         gantt.addMarker({
@@ -712,7 +747,6 @@
         styleSheet.innerText += rule;
     }
 
-    // Rebuild all link color styles from current data (used on restore)
     function rebuildAllLinkStyles() {
         const styleSheet = document.getElementById('dynamic-link-styles');
         styleSheet.innerText = "";
@@ -774,7 +808,6 @@
     gantt.attachEvent("onTaskDrag", function(id, mode, task, original) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskMove", function(id) { scheduleSave(); });
 
-    // Save scroll position (debounced separately to avoid excessive writes)
     let scrollSaveTimeout = null;
     gantt.attachEvent("onGanttScroll", function(left, top) {
         clearTimeout(scrollSaveTimeout);
@@ -785,12 +818,17 @@
     // FILE IO + LOCAL STORAGE RESTORE
     // ===================================================================
     window.addEventListener('load', () => {
-        // PRIORITY 1: Try to restore from localStorage
         const savedState = loadStateFromStorage();
         if (savedState) {
             console.log('Restoring saved state from', new Date(savedState.timestamp).toLocaleString());
             
-            // Restore zoom level
+            // Restore magnetism state
+            if (savedState.snapEnabled !== undefined) {
+                snapEnabled = !!savedState.snapEnabled;
+                applyMagnetismState();
+                updateMagnetBtn();
+            }
+
             if (savedState.zoomIndex !== undefined && savedState.zoomIndex >= 0 && savedState.zoomIndex < zoomLevels.length) {
                 currentZoomIndex = savedState.zoomIndex;
                 const level = zoomLevels[currentZoomIndex];
@@ -806,38 +844,32 @@
                 updateZoomLabel();
             }
 
-            // Restore grid visibility
             if (savedState.showGrid !== undefined) {
                 gantt.config.show_grid = savedState.showGrid;
                 updateGridToggleBtn();
             }
 
-            // Restore search text
             if (savedState.searchText) {
                 currentSearch = savedState.searchText;
             }
 
-            // Re-init gantt with restored zoom settings then parse data
             gantt.render();
             gantt.parse(savedState.data);
             rebuildAllLinkStyles();
             restoreSearchInput();
 
-            // Restore scroll position after render settles
             setTimeout(() => {
                 if (savedState.scrollX || savedState.scrollY) {
                     gantt.scrollTo(savedState.scrollX || 0, savedState.scrollY || 0);
                 }
             }, 100);
 
-            return; // Skip fetching the JSON file
+            return;
         }
 
-        // PRIORITY 2: Fall back to loading gantt_data.json
         fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
             if(data) {
                 gantt.parse(processGanttData(data));
-                // Save initial load so next reload is instant
                 setTimeout(() => saveStateToStorage(false), 500);
             }
         }).catch((e) => { console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); });
@@ -856,7 +888,6 @@
                 reinitTodayMarker(); 
                 gantt.parse(processGanttData(JSON.parse(ev.target.result)));
                 rebuildAllLinkStyles();
-                // Save the newly loaded data
                 setTimeout(() => saveStateToStorage(true), 300);
             } catch (err) { alert("Error parsing JSON"); }
         };
@@ -872,7 +903,7 @@
     }
 
     // ===================================================================
-    // ZOOM CONTROLS: WHEEL + PINCH + BUTTONS
+    // ZOOM CONTROLS
     // ===================================================================
     const container = document.getElementById("gantt_here");
     let lastZoomTime = 0;
@@ -899,7 +930,6 @@
         }
     }, { passive: false, capture: true });
 
-    // MOBILE: pinch-to-zoom
     let pinchState = null;
 
     function getTouchDistance(touchList) {
@@ -957,16 +987,13 @@
     document.getElementById('zoomInBtn').addEventListener('click', () => zoomStepFromUI(+1));
     document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStepFromUI(-1));
 
-    // Block iOS Safari system pinch gestures
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
 
-    // Suppress long-press context menu on mobile
     container.addEventListener('contextmenu', function (e) {
         if (isCoarsePointer) e.preventDefault();
     });
 
-    // Re-render on orientation change / window resize
     let resizeTimer = null;
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
@@ -976,14 +1003,10 @@
         }, 250);
     });
 
-    // ===================================================================
-    // SAVE BEFORE PAGE UNLOAD (catches browser close / refresh)
-    // ===================================================================
     window.addEventListener('beforeunload', function() {
         saveStateToStorage(false);
     });
 
-    // Also save on visibility change (mobile: app switching / tab switching)
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
             saveStateToStorage(false);
