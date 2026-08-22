@@ -21,7 +21,6 @@
             height: 100%; margin: 0; padding: 0;
             font-family: 'Roboto', sans-serif; overflow: hidden;
         }
-        /* MOBILE: flex column layout + dynamic viewport height so it works behind mobile browser toolbars */
         body {
             display: flex; flex-direction: column;
             height: 100dvh;
@@ -63,10 +62,11 @@
         button.highlight { border: 2px solid #0288d1; color: #0288d1; font-weight: bold; }
         button.add-btn { background-color: #2e7d32; }
         button.add-btn:hover { background-color: #1b5e20; }
+        button.danger { background-color: #d32f2f; }
+        button.danger:hover { background-color: #b71c1c; }
 
         #fileInput, #linkColorInput { display: none; }
 
-        /* --- SEARCH FIELD CSS --- */
         .gantt_grid_scale .gantt_grid_head_cell {
             white-space: normal !important;
             line-height: normal !important;
@@ -104,7 +104,6 @@
             width: 100%;
             flex: 1 1 auto; min-height: 0;
             background: white; position: relative;
-            /* MOBILE: allow native one-finger panning, but keep pinch gestures for our JS zoom handler */
             touch-action: pan-x pan-y;
             -webkit-touch-callout: none;
         }
@@ -112,7 +111,6 @@
             user-select: none; -webkit-user-select: none;
         }
 
-        /* Visual Feedback */
         .gantt_task_scale { cursor: ew-resize !important; } 
         .gantt_task_content { cursor: grab; }
 
@@ -128,14 +126,12 @@
             width: 100%; height: 25px; border: 1px solid #ccc; cursor: pointer; background: none;
         }
 
-        /* --- CURRENT DAY MARKER CSS --- */
         .today {
             background: none; 
             border-left: 2px dotted #ff5252; 
             width: 0 !important; 
         }
 
-        /* --- MOBILE: floating zoom controls (pinch alternative / quick access) --- */
         .zoom-controls {
             position: fixed;
             right: max(14px, env(safe-area-inset-right));
@@ -180,20 +176,38 @@
         .link-editor-buttons button { flex: 1; }
         .btn-delete { background: #d32f2f !important; }
 
-        /* ================= MOBILE / RESPONSIVE ADJUSTMENTS ================= */
+        /* Save indicator toast */
+        .save-indicator {
+            position: fixed;
+            bottom: calc(80px + env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #323232;
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .save-indicator.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         @media (max-width: 1000px) {
-            .instruction { display: none; } /* hide long desktop-only hint */
+            .instruction { display: none; }
         }
 
         @media (max-width: 768px) {
-            /* Full-screen lightbox on small devices */
             .gantt_cal_light, .gantt_cal_light_wide {
                 width: 100vw !important; max-width: 100vw !important;
                 left: 0 !important; top: 0 !important;
                 height: 100% !important; max-height: 100% !important;
                 border-radius: 0; box-sizing: border-box; overflow-y: auto;
             }
-            /* 16px inputs prevent iOS auto-zoom on focus */
             .gantt_cal_light select, .gantt_cal_light input, .gantt_cal_light textarea,
             .link-editor-content select, .link-editor-content input,
             .search-header-input { font-size: 16px; }
@@ -203,7 +217,7 @@
             .controls { min-height: 0; padding: 8px 12px; }
             .controls h2 { flex: 1 1 100%; font-size: 1rem; }
             .toolbar-right { width: 100%; }
-            button { padding: 10px 12px; font-size: 0.85rem; min-height: 42px; } /* touch-friendly targets */
+            button { padding: 10px 12px; font-size: 0.85rem; min-height: 42px; }
         }
     </style>
     <style id="dynamic-link-styles"></style>
@@ -220,18 +234,22 @@
         <input type="color" id="linkColorInput"> 
         <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()">📋 Hide List</button>
         <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
-        <button onclick="saveData()">💾 Save Changes</button>
+        <button onclick="saveData()">💾 Export</button>
+        <button class="danger" onclick="clearSavedState()" title="Clear all locally saved data and start fresh">🗑️ Reset</button>
     </div>
 </div>
 
 <div id="gantt_here"></div>
 
-<!-- MOBILE: on-screen zoom controls (alternative to wheel / pinch) -->
+<!-- MOBILE: on-screen zoom controls -->
 <div class="zoom-controls">
     <button id="zoomInBtn" aria-label="Zoom in" title="Zoom in">＋</button>
     <span class="zoom-label" id="zoomLabel">month</span>
     <button id="zoomOutBtn" aria-label="Zoom out" title="Zoom out">－</button>
 </div>
+
+<!-- Save indicator toast -->
+<div class="save-indicator" id="saveIndicator">✓ Progress saved</div>
 
 <!-- Link Editor Modal -->
 <div id="linkEditorModal">
@@ -259,11 +277,74 @@
 </div>
 
 <script>
-    // --- 0. DEVICE DETECTION HELPERS (MOBILE) ---
+    // ===================================================================
+    // LOCAL STORAGE PERSISTENCE MODULE
+    // ===================================================================
+    const STORAGE_KEY = 'igev_gantt_state';
+    let saveTimeout = null;
+
+    function showSaveIndicator() {
+        const el = document.getElementById('saveIndicator');
+        el.classList.add('visible');
+        setTimeout(() => el.classList.remove('visible'), 1500);
+    }
+
+    function saveStateToStorage(showToast = true) {
+        try {
+            const scrollState = gantt.getScrollState();
+            const state = {
+                version: 2,
+                timestamp: Date.now(),
+                data: gantt.serialize(),
+                zoomIndex: currentZoomIndex,
+                activeRowHeight: activeRowHeight,
+                showGrid: gantt.config.show_grid,
+                searchText: currentSearch,
+                scrollX: scrollState.x || 0,
+                scrollY: scrollState.y || 0
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            if (showToast) showSaveIndicator();
+        } catch (e) {
+            console.warn('Failed to save state to localStorage:', e);
+        }
+    }
+
+    function loadStateFromStorage() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            const state = JSON.parse(raw);
+            if (!state || !state.data || !state.data.data) return null;
+            return state;
+        } catch (e) {
+            console.warn('Failed to load state from localStorage:', e);
+            return null;
+        }
+    }
+
+    function clearSavedState() {
+        if (confirm('Clear all saved progress and start fresh?')) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    }
+
+    // Debounced save (waits 800ms after last change before writing)
+    function scheduleSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => saveStateToStorage(true), 800);
+    }
+
+    // ===================================================================
+    // DEVICE DETECTION HELPERS (MOBILE)
+    // ===================================================================
     const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
 
-    // --- 1. CUSTOM COLOR PICKER ---
+    // ===================================================================
+    // CUSTOM COLOR PICKER
+    // ===================================================================
     gantt.form_blocks["color_picker"] = {
         render: function (sns) {
             return "<div class='color-picker-container'><input type='color'></div>";
@@ -278,13 +359,16 @@
         focus: function (node) { node.querySelector("input").focus(); }
     };
 
-    // --- 2. TOUCH SUPPORT CONFIG (MOBILE) ---
-    // Enables built-in touch handling (auto-detected), long-press task dragging and haptic feedback.
+    // ===================================================================
+    // TOUCH SUPPORT CONFIG (MOBILE)
+    // ===================================================================
     gantt.config.touch = true;
     gantt.config.touch_drag = true;
     gantt.config.touch_feedback = true;
 
-    // --- 3. CONFIGURATION ---
+    // ===================================================================
+    // CONFIGURATION
+    // ===================================================================
     gantt.config.order_branch = true;
     gantt.config.order_branch_free = true;
 
@@ -294,7 +378,6 @@
             <input type='text' class='search-header-input' placeholder='🔍 Search...' oninput='applyFilter(this.value)' onclick='event.stopPropagation()' onmousedown='event.stopPropagation()' ontouchstart='event.stopPropagation()'>
         </div>`;
 
-    // MOBILE: narrower grid columns on phones; hide the "Days" column to leave room for the timeline
     const ganttColumns = [
         { name: "text", label: searchHeaderHTML, tree: true, width: isSmallScreen ? 165 : 250, min_width: isSmallScreen ? 120 : 150, resize: true },
         { name: "start_date", label: "Start", align: "center", width: isSmallScreen ? 65 : 90, resize: true }
@@ -302,16 +385,14 @@
     if (!isSmallScreen) {
         ganttColumns.push({ name: "duration", label: "Days", align: "center", width: 50 });
     }
-    ganttColumns.push({ name: "add", width: isSmallScreen ? 38 : 44 }); // The add column native button
+    ganttColumns.push({ name: "add", width: isSmallScreen ? 38 : 44 });
     gantt.config.columns = ganttColumns;
 
     // --- LIGHTBOX SECTIONS ---
-    // Added 'typeselect' to allow choosing between Task, Project, and Milestone
     gantt.locale.labels.section_type = "Element Type";
     gantt.locale.labels.section_task_color = "Item Color";
     gantt.locale.labels.section_text_color = "Label Color";
 
-    // Standard Tasks
     gantt.config.lightbox.sections = [
         {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
@@ -320,7 +401,6 @@
         {name: "time", height: 72, type: "duration", map_to: "auto"}
     ];
 
-    // Projects (Groups of Tasks - Time is auto-calculated from children)
     gantt.config.lightbox.project_sections = [
         {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
@@ -328,7 +408,6 @@
         {name: "text_color", height: 30, map_to: "textColor", type: "color_picker"}
     ];
 
-    // Milestones (Single Date Elements)
     gantt.config.lightbox.milestone_sections = [
         {name: "type", type: "typeselect", map_to: "type"},
         {name: "description", height: 70, map_to: "text", type: "textarea", focus: true},
@@ -351,14 +430,18 @@
 
     gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
 
-    // --- SEARCH STATE (kept across re-renders, e.g. grid toggle / resize / zoom) ---
+    // ===================================================================
+    // SEARCH STATE
+    // ===================================================================
     let currentSearch = "";
     function restoreSearchInput() {
         const el = document.querySelector('.search-header-input');
         if (el && el.value !== currentSearch) el.value = currentSearch;
     }
 
-    // --- 4. CUSTOM ZOOM LEVELS ---
+    // ===================================================================
+    // CUSTOM ZOOM LEVELS
+    // ===================================================================
     const zoomLevels = [
         { name: "year", scale_height: 60, row_height: 25, min_column_width: 30, scales: [{unit: "year", step: 1, format: "%Y"}]},
         { name: "quarter", scale_height: 60, row_height: 30, min_column_width: 90, scales: [{unit: "year", step: 1, format: "%Y"}, {unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1)}]},
@@ -375,7 +458,6 @@
         if (labelEl) labelEl.textContent = zoomLevels[currentZoomIndex].name;
     }
 
-    // Core zoom routine shared by mouse wheel, touch pinch and the on-screen +/- buttons.
     function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
         if (!gantt.$task) return;
         if (nextIndex < 0) nextIndex = 0;
@@ -422,9 +504,10 @@
         }
 
         gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
+        scheduleSave(); // Save zoom + scroll state
     }
 
-    // MOBILE: start without the tree panel on very small screens (toggle it back with the 📋 button)
+    // MOBILE: start without the tree panel on very small screens
     if (window.innerWidth < 560) {
         gantt.config.show_grid = false;
     }
@@ -452,13 +535,16 @@
 
     reinitTodayMarker();
 
-    // --- GRID TOGGLE (MOBILE: give the timeline full width when needed) ---
+    // ===================================================================
+    // GRID TOGGLE
+    // ===================================================================
     function toggleGrid(forceState) {
         const target = (forceState === undefined) ? !gantt.config.show_grid : forceState;
         if (gantt.config.show_grid !== target) {
             gantt.config.show_grid = target;
             gantt.render();
             restoreSearchInput();
+            scheduleSave();
         }
         updateGridToggleBtn();
     }
@@ -468,11 +554,14 @@
     }
     updateGridToggleBtn();
 
-    // --- 5. DATA LOGIC ---
+    // ===================================================================
+    // DATA LOGIC
+    // ===================================================================
     window.applyFilter = function(query) {
         currentSearch = query;
         gantt.refreshData();
         setTimeout(scrollToFirstVisible, 40);
+        scheduleSave();
     };
 
     function processGanttData(jsonData) {
@@ -490,13 +579,12 @@
             items.forEach(item => {
                 const currentId = item.TaskID || item.id;
                 
-                // Allow explicit types (project, milestone, task). Fallback to Duration check for backwards compatibility
                 let elemType = item.type;
                 if (!elemType) {
                     elemType = (item.Duration === 0 || item.duration === 0) ? "milestone" : "task";
                 }
 
-                let finalColor = "#3db9d3"; // Default Task
+                let finalColor = "#3db9d3";
                 if (elemType === "milestone") finalColor = "#e91e63";
                 if (elemType === "project") finalColor = "#4caf50";
 
@@ -531,14 +619,15 @@
         return { data: tasks, links: links };
     }
 
-    // --- LINK EDITING ---
+    // ===================================================================
+    // LINK EDITING
+    // ===================================================================
     let currentEditingLinkId = null;
     gantt.attachEvent("onLinkDblClick", function(id){
         if(gantt.isLinkExists(id)) openLinkEditor(id);
         return false;
     });
 
-    // MOBILE: double-tap a link to edit it (dblclick is unreliable on touch screens)
     let linkTapState = { id: null, time: 0 };
     gantt.attachEvent("onLinkClick", function(id){
         const now = Date.now();
@@ -550,7 +639,6 @@
         }
     });
 
-    // MOBILE: double-tap a task to open its lightbox on touch devices
     let taskTapState = { id: null, time: 0 };
     gantt.attachEvent("onTaskClick", function(id){
         if (!isCoarsePointer) return true;
@@ -585,6 +673,7 @@
             injectLinkColorStyle(currentEditingLinkId, link.color);
             gantt.updateLink(currentEditingLinkId);
             closeLinkEditor();
+            scheduleSave();
         }
     }
 
@@ -593,6 +682,7 @@
             if(confirm("Delete dependency?")) {
                 gantt.deleteLink(currentEditingLinkId);
                 closeLinkEditor();
+                scheduleSave();
             }
         }
     }
@@ -603,10 +693,16 @@
 
     gantt.attachEvent("onAfterLinkUpdate", function(id, link){
         if(link.color) injectLinkColorStyle(id, link.color);
+        scheduleSave();
     });
 
     gantt.attachEvent("onAfterLinkAdd", function(id, link){
         if(link.color) injectLinkColorStyle(id, link.color);
+        scheduleSave();
+    });
+
+    gantt.attachEvent("onLinkDeleted", function(id){
+        scheduleSave();
     });
 
     function injectLinkColorStyle(linkId, color) {
@@ -616,7 +712,18 @@
         styleSheet.innerText += rule;
     }
 
-    // --- FILTER ---
+    // Rebuild all link color styles from current data (used on restore)
+    function rebuildAllLinkStyles() {
+        const styleSheet = document.getElementById('dynamic-link-styles');
+        styleSheet.innerText = "";
+        gantt.eachLink(function(link) {
+            if (link.color) injectLinkColorStyle(link.id, link.color);
+        });
+    }
+
+    // ===================================================================
+    // FILTER
+    // ===================================================================
     function scrollToFirstVisible() {
         let firstTaskId = null;
         gantt.eachTask(function(task){
@@ -658,10 +765,81 @@
         return false;
     });
 
-    // --- FILE IO ---
+    // ===================================================================
+    // PERSISTENCE: AUTO-SAVE ON DATA CHANGES
+    // ===================================================================
+    gantt.attachEvent("onAfterTaskAdd", function(id, task) { scheduleSave(); });
+    gantt.attachEvent("onAfterTaskUpdate", function(id, task) { scheduleSave(); });
+    gantt.attachEvent("onAfterTaskDelete", function(id) { scheduleSave(); });
+    gantt.attachEvent("onTaskDrag", function(id, mode, task, original) { scheduleSave(); });
+    gantt.attachEvent("onAfterTaskMove", function(id) { scheduleSave(); });
+
+    // Save scroll position (debounced separately to avoid excessive writes)
+    let scrollSaveTimeout = null;
+    gantt.attachEvent("onGanttScroll", function(left, top) {
+        clearTimeout(scrollSaveTimeout);
+        scrollSaveTimeout = setTimeout(() => saveStateToStorage(false), 1200);
+    });
+
+    // ===================================================================
+    // FILE IO + LOCAL STORAGE RESTORE
+    // ===================================================================
     window.addEventListener('load', () => {
+        // PRIORITY 1: Try to restore from localStorage
+        const savedState = loadStateFromStorage();
+        if (savedState) {
+            console.log('Restoring saved state from', new Date(savedState.timestamp).toLocaleString());
+            
+            // Restore zoom level
+            if (savedState.zoomIndex !== undefined && savedState.zoomIndex >= 0 && savedState.zoomIndex < zoomLevels.length) {
+                currentZoomIndex = savedState.zoomIndex;
+                const level = zoomLevels[currentZoomIndex];
+                gantt.config.scales = level.scales;
+                gantt.config.min_column_width = level.min_column_width;
+                gantt.config.scale_height = level.scale_height;
+                if (savedState.activeRowHeight) {
+                    activeRowHeight = savedState.activeRowHeight;
+                } else {
+                    activeRowHeight = level.row_height;
+                }
+                gantt.config.row_height = activeRowHeight;
+                updateZoomLabel();
+            }
+
+            // Restore grid visibility
+            if (savedState.showGrid !== undefined) {
+                gantt.config.show_grid = savedState.showGrid;
+                updateGridToggleBtn();
+            }
+
+            // Restore search text
+            if (savedState.searchText) {
+                currentSearch = savedState.searchText;
+            }
+
+            // Re-init gantt with restored zoom settings then parse data
+            gantt.render();
+            gantt.parse(savedState.data);
+            rebuildAllLinkStyles();
+            restoreSearchInput();
+
+            // Restore scroll position after render settles
+            setTimeout(() => {
+                if (savedState.scrollX || savedState.scrollY) {
+                    gantt.scrollTo(savedState.scrollX || 0, savedState.scrollY || 0);
+                }
+            }, 100);
+
+            return; // Skip fetching the JSON file
+        }
+
+        // PRIORITY 2: Fall back to loading gantt_data.json
         fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
-            if(data) gantt.parse(processGanttData(data));
+            if(data) {
+                gantt.parse(processGanttData(data));
+                // Save initial load so next reload is instant
+                setTimeout(() => saveStateToStorage(false), 500);
+            }
         }).catch((e) => { console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); });
     });
 
@@ -677,6 +855,9 @@
                 
                 reinitTodayMarker(); 
                 gantt.parse(processGanttData(JSON.parse(ev.target.result)));
+                rebuildAllLinkStyles();
+                // Save the newly loaded data
+                setTimeout(() => saveStateToStorage(true), 300);
             } catch (err) { alert("Error parsing JSON"); }
         };
         reader.readAsText(e.target.files[0]);
@@ -690,7 +871,9 @@
         a.click();
     }
 
-    // --- 6. ZOOM CONTROLS: WHEEL (desktop) + PINCH (mobile) + BUTTONS (both) ---
+    // ===================================================================
+    // ZOOM CONTROLS: WHEEL + PINCH + BUTTONS
+    // ===================================================================
     const container = document.getElementById("gantt_here");
     let lastZoomTime = 0;
 
@@ -716,7 +899,7 @@
         }
     }, { passive: false, capture: true });
 
-    // MOBILE: pinch-to-zoom over the timeline (two-finger gesture)
+    // MOBILE: pinch-to-zoom
     let pinchState = null;
 
     function getTouchDistance(touchList) {
@@ -733,7 +916,7 @@
 
     container.addEventListener('touchmove', function (e) {
         if (!pinchState || e.touches.length !== 2) return;
-        e.preventDefault(); // stop the browser from zooming/scrolling while pinching
+        e.preventDefault();
         e.stopPropagation();
 
         const newDistance = getTouchDistance(e.touches);
@@ -751,7 +934,7 @@
                 const inHeader = (midY - taskRect.top) < headerHeight;
                 applyZoom(currentZoomIndex + (ratio > 1 ? 1 : -1), midX, midY, inHeader);
             }
-            pinchState.distance = newDistance; // allow continuous stepping while pinching
+            pinchState.distance = newDistance;
         }
     }, { passive: false });
 
@@ -761,7 +944,6 @@
     container.addEventListener('touchend', endPinch, { passive: true });
     container.addEventListener('touchcancel', endPinch, { passive: true });
 
-    // On-screen +/- zoom buttons (anchored at the visible center of the timeline)
     function zoomStepFromUI(delta) {
         const now = Date.now();
         if (now - lastZoomTime < 100) return;
@@ -775,16 +957,16 @@
     document.getElementById('zoomInBtn').addEventListener('click', () => zoomStepFromUI(+1));
     document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStepFromUI(-1));
 
-    // MOBILE: block iOS Safari system pinch gestures over the app
+    // Block iOS Safari system pinch gestures
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
 
-    // MOBILE: suppress the long-press context menu so long-press can be used for dragging tasks
+    // Suppress long-press context menu on mobile
     container.addEventListener('contextmenu', function (e) {
         if (isCoarsePointer) e.preventDefault();
     });
 
-    // MOBILE / RESIZE: re-render on orientation change / window resize (search text is preserved)
+    // Re-render on orientation change / window resize
     let resizeTimer = null;
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
@@ -792,6 +974,20 @@
             gantt.render();
             restoreSearchInput();
         }, 250);
+    });
+
+    // ===================================================================
+    // SAVE BEFORE PAGE UNLOAD (catches browser close / refresh)
+    // ===================================================================
+    window.addEventListener('beforeunload', function() {
+        saveStateToStorage(false);
+    });
+
+    // Also save on visibility change (mobile: app switching / tab switching)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            saveStateToStorage(false);
+        }
     });
 </script>
 </body>
