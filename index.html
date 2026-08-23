@@ -872,6 +872,7 @@
             <option value="amber">🔶 Amber</option>
             <option value="matrix">💚 Matrix</option>
         </select>
+        <button class="secondary" onclick="showToday()" title="Jump to current day">📅 Today</button>
         <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Show/hide task list">📋 List</button>
         <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap tasks to grid units">🧲 Snap: Off</button>
         <button class="secondary highlight" onclick="document.getElementById('fileInput').click()">📂 Load</button>
@@ -1243,6 +1244,21 @@
     reinitTodayMarker();
 
     // ===================================================================
+    // TODAY / DAY 0
+    // ===================================================================
+    function showToday() {
+        if (gantt.$task) {
+            const today = new Date();
+            const posX = gantt.posFromDate(today);
+            const state = gantt.getScrollState();
+            const containerWidth = gantt.$task.getBoundingClientRect().width;
+            // Position today about 1/3 from the left edge so user can see past days
+            const scrollX = posX - (containerWidth / 3);
+            gantt.scrollTo(Math.max(0, scrollX), state.y);
+        }
+    }
+
+    // ===================================================================
     // GRID TOGGLE
     // ===================================================================
     function toggleGrid(forceState) {
@@ -1536,8 +1552,10 @@
             restoreSearchInput();
 
             setTimeout(() => {
-                if (savedState.scrollX || savedState.scrollY) {
+                if (savedState.scrollX !== undefined || savedState.scrollY !== undefined) {
                     gantt.scrollTo(savedState.scrollX || 0, savedState.scrollY || 0);
+                } else {
+                    showToday();
                 }
             }, 100);
 
@@ -1545,11 +1563,17 @@
         }
 
         fetch('gantt_data.json').then(r => r.ok ? r.json() : null).then(data => {
-            if(data) {
+            if(data && data.data && data.data.length > 0) {
                 gantt.parse(processGanttData(data));
                 setTimeout(() => saveStateToStorage(false), 500);
+            } else {
+                showToday();
+                setTimeout(() => saveStateToStorage(false), 500);
             }
-        }).catch((e) => { console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); });
+        }).catch((e) => { 
+            console.warn("Local JSON load failed (likely CORS). Use Load JSON button."); 
+            showToday();
+        });
     });
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
@@ -1563,7 +1587,11 @@
                 if(searchEl) searchEl.value = "";
 
                 reinitTodayMarker();
-                gantt.parse(processGanttData(JSON.parse(ev.target.result)));
+                const parsedData = processGanttData(JSON.parse(ev.target.result));
+                gantt.parse(parsedData);
+                if (!parsedData.data || parsedData.data.length === 0) {
+                    showToday();
+                }
                 rebuildAllLinkStyles();
                 setTimeout(() => saveStateToStorage(true), 300);
             } catch (err) { alert("Error parsing JSON"); }
