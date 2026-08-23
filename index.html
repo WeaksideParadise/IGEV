@@ -1139,6 +1139,8 @@
     });
 
     gantt.config.drag_timeline = { ignore: ".gantt_task_line", useKey: false };
+    gantt.config.autoscroll = true;
+    gantt.config.autoscroll_speed = 25;
 
     // ===================================================================
     // SEARCH
@@ -1489,18 +1491,72 @@
     });
 
     // ===================================================================
-    // AUTO-SAVE
+    // AUTO-SAVE & INFINITE SCROLL EXPANSION
     // ===================================================================
     gantt.attachEvent("onAfterTaskAdd", function(id, task) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskUpdate", function(id, task) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskDelete", function(id) { scheduleSave(); });
-    gantt.attachEvent("onTaskDrag", function(id, mode, task, original) { scheduleSave(); });
+    
+    // Infinite scroll logic for task dragging
+    gantt.attachEvent("onTaskDrag", function(id, mode, task, original) { 
+        scheduleSave(); 
+        const state = gantt.getState();
+        let min_date = gantt.config.start_date || state.min_date || new Date();
+        let max_date = gantt.config.end_date || state.max_date || new Date();
+        
+        let repaint = false;
+        if (+task.start_date <= +min_date) {
+            gantt.config.start_date = gantt.date.add(min_date, -30, "day");
+            repaint = true;
+        }
+        if (+task.end_date >= +max_date) {
+            gantt.config.end_date = gantt.date.add(max_date, 30, "day");
+            repaint = true;
+        }
+        if (repaint) {
+            gantt.render();
+        }
+    });
+    
     gantt.attachEvent("onAfterTaskMove", function(id) { scheduleSave(); });
 
     let scrollSaveTimeout = null;
+    let scrollExpandTimeout = null;
+    
+    // Infinite scroll logic for manual panning / timeline dragging
     gantt.attachEvent("onGanttScroll", function(left, top) {
         clearTimeout(scrollSaveTimeout);
         scrollSaveTimeout = setTimeout(() => saveStateToStorage(false), 1200);
+
+        clearTimeout(scrollExpandTimeout);
+        scrollExpandTimeout = setTimeout(function () {
+            const state = gantt.getState();
+            const left_date = gantt.dateFromPos(left);
+            const right_date = gantt.dateFromPos(left + gantt.$task.offsetWidth);
+            
+            if (!left_date || !right_date) return;
+
+            let min_date = gantt.config.start_date || state.min_date || new Date();
+            let max_date = gantt.config.end_date || state.max_date || new Date();
+            
+            let repaint = false;
+            if (+left_date <= +gantt.date.add(min_date, 5, "day")) {
+                gantt.config.start_date = gantt.date.add(min_date, -30, "day");
+                repaint = true;
+            }
+            if (+right_date >= +gantt.date.add(max_date, -5, "day")) {
+                gantt.config.end_date = gantt.date.add(max_date, 30, "day");
+                repaint = true;
+            }
+            
+            if (repaint) {
+                const scrollState = gantt.getScrollState();
+                const anchorDate = gantt.dateFromPos(scrollState.x + gantt.$task.offsetWidth / 2);
+                gantt.render();
+                const newAnchorPos = gantt.posFromDate(anchorDate);
+                gantt.scrollTo(newAnchorPos - gantt.$task.offsetWidth / 2, scrollState.y);
+            }
+        }, 100);
     });
 
     // ===================================================================
