@@ -916,6 +916,8 @@
 </div>
 
 <script>
+    let isExpandingTimeline = false;
+
     // ===================================================================
     // THEME MANAGEMENT
     // ===================================================================
@@ -941,8 +943,10 @@
         const sel = document.getElementById('themeSelector');
         if (sel) sel.value = name;
         if (typeof gantt !== 'undefined' && gantt.$task) {
+            isExpandingTimeline = true;
             gantt.render();
             restoreSearchInput();
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
         }
     }
 
@@ -1184,7 +1188,7 @@
         const absoluteY = state.y + offsetY;
 
         const cursorDate = gantt.dateFromPos(absoluteX);
-        const cursorRowIndex = absoluteY / activeRowHeight;
+        const cursorRowIndex = activeRowHeight > 0 ? absoluteY / activeRowHeight : 0;
 
         const nextLevel = zoomLevels[nextIndex];
         currentZoomIndex = nextIndex;
@@ -1199,6 +1203,7 @@
             gantt.config.row_height = activeRowHeight;
         }
 
+        isExpandingTimeline = true;
         gantt.render();
         restoreSearchInput();
         updateZoomLabel();
@@ -1216,6 +1221,9 @@
         }
 
         gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
+        setTimeout(() => {
+            isExpandingTimeline = false;
+        }, 150);
         scheduleSave();
     }
 
@@ -1229,6 +1237,7 @@
         gantt.config.min_column_width = level.min_column_width;
         gantt.config.scale_height = level.scale_height;
         gantt.config.row_height = activeRowHeight;
+        gantt.config.fit_tasks = true;
         gantt.init("gantt_here");
         updateZoomLabel();
     }
@@ -1251,12 +1260,29 @@
     function showToday() {
         if (gantt.$task) {
             const today = new Date();
+            const state = gantt.getState();
+            let min_date = gantt.config.start_date || state.min_date;
+            let max_date = gantt.config.end_date || state.max_date;
+            if (min_date && max_date && (+today < +min_date || +today > +max_date)) {
+                const step = getExpansionStep();
+                if (+today < +min_date) {
+                    gantt.config.start_date = gantt.date.add(today, -step.amount, step.unit);
+                }
+                if (+today > +max_date) {
+                    gantt.config.end_date = gantt.date.add(today, step.amount, step.unit);
+                }
+                isExpandingTimeline = true;
+                gantt.render();
+                setTimeout(() => { isExpandingTimeline = false; }, 100);
+            }
             const posX = gantt.posFromDate(today);
-            const state = gantt.getScrollState();
+            const scrollState = gantt.getScrollState();
             const containerWidth = gantt.$task.getBoundingClientRect().width;
             // Position today about 1/3 from the left edge so user can see past days
             const scrollX = posX - (containerWidth / 3);
-            gantt.scrollTo(Math.max(0, scrollX), state.y);
+            isExpandingTimeline = true;
+            gantt.scrollTo(Math.max(0, scrollX), scrollState.y);
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
         }
     }
 
@@ -1267,8 +1293,10 @@
         const target = (forceState === undefined) ? !gantt.config.show_grid : forceState;
         if (gantt.config.show_grid !== target) {
             gantt.config.show_grid = target;
+            isExpandingTimeline = true;
             gantt.render();
             restoreSearchInput();
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
             scheduleSave();
         }
         updateGridToggleBtn();
@@ -1491,72 +1519,161 @@
     });
 
     // ===================================================================
-    // AUTO-SAVE & INFINITE SCROLL EXPANSION
+    // AUTO-SAVE & INFINITE SCROLL / PANNING EXPANSION
     // ===================================================================
     gantt.attachEvent("onAfterTaskAdd", function(id, task) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskUpdate", function(id, task) { scheduleSave(); });
     gantt.attachEvent("onAfterTaskDelete", function(id) { scheduleSave(); });
-    
-    // Infinite scroll logic for task dragging
-    gantt.attachEvent("onTaskDrag", function(id, mode, task, original) { 
-        scheduleSave(); 
-        const state = gantt.getState();
-        let min_date = gantt.config.start_date || state.min_date || new Date();
-        let max_date = gantt.config.end_date || state.max_date || new Date();
-        
-        let repaint = false;
-        if (+task.start_date <= +min_date) {
-            gantt.config.start_date = gantt.date.add(min_date, -30, "day");
-            repaint = true;
+    gantt.attachEvent("onAfterTaskMove", function(id) { scheduleSave(); });
+
+    let isTaskDragging = false;
+    gantt.attachEvent("onBeforeTaskDrag", function(id, mode, e) {
+        isTaskDragging = true;
+        return true;
+    });
+
+    gantt.attachEvent("onTaskDrag", function(id, mode, task, original) {
+        // Built-in autoscroll handles moving the timeline as the task nears the viewport edges.
+        // We purposefully avoid re-rendering here to prevent DOM destruction and stutter during active drag.
+    });
+
+    gantt.attachEvent("onAfterTaskDrag", function(id, mode, e) {
+        isTaskDragging = false;
+        const task = gantt.isTaskExists(id) ? gantt.getTask(id) : null;
+        if (task) {
+            const state = gantt.getState();
+            let curMinDate = gantt.config.start_date || state.min_date;
+            let curMaxDate = gantt.config.end_date || state.max_date;
+            const step = getExpansionStep();
+            let repaint = false;
+
+            if (curMinDate && +task.start_date < +curMinDate) {
+                gantt.config.start_date = gantt.date.add(task.start_date, -step.amount, step.unit);
+                if (!gantt.config.end_date) gantt.config.end_date = new Date(curMaxDate);
+                repaint = true;
+            }
+            if (curMaxDate && +task.end_date > +curMaxDate) {
+                gantt.config.end_date = gantt.date.add(task.end_date, step.amount, step.unit);
+                if (!gantt.config.start_date) gantt.config.start_date = new Date(curMinDate);
+                repaint = true;
+            }
+            if (repaint) {
+                isExpandingTimeline = true;
+                gantt.render();
+                setTimeout(() => { isExpandingTimeline = false; }, 100);
+            }
         }
-        if (+task.end_date >= +max_date) {
-            gantt.config.end_date = gantt.date.add(max_date, 30, "day");
-            repaint = true;
-        }
-        if (repaint) {
-            gantt.render();
+        scheduleSave();
+    });
+
+    // Panning & scroll expansion logic
+    let isMouseDownOnTimeline = false;
+    document.addEventListener('mousedown', function(e) {
+        if (e.target && e.target.closest && e.target.closest('#gantt_here .gantt_task')) {
+            isMouseDownOnTimeline = true;
         }
     });
-    
-    gantt.attachEvent("onAfterTaskMove", function(id) { scheduleSave(); });
+    document.addEventListener('mouseup', function() {
+        if (isMouseDownOnTimeline) {
+            isMouseDownOnTimeline = false;
+            clearTimeout(scrollExpandTimeout);
+            scrollExpandTimeout = setTimeout(checkAndExpandTimeline, 80);
+        }
+    });
+    document.addEventListener('touchend', function() {
+        if (isMouseDownOnTimeline) {
+            isMouseDownOnTimeline = false;
+            clearTimeout(scrollExpandTimeout);
+            scrollExpandTimeout = setTimeout(checkAndExpandTimeline, 80);
+        }
+    });
+    document.addEventListener('touchcancel', function() {
+        isMouseDownOnTimeline = false;
+    });
+
+    function getExpansionStep() {
+        switch (currentZoomIndex) {
+            case 0: return { unit: "year", amount: 3 };     // Year scale: add 3 years (~90-300px)
+            case 1: return { unit: "month", amount: 18 };   // Quarter scale: add 6 quarters (18 months ~540px)
+            case 2: return { unit: "month", amount: 6 };    // Month scale: add 6 months (~720px)
+            case 3: return { unit: "week", amount: 8 };     // Week scale: add 8 weeks (~560-800px)
+            case 4: return { unit: "day", amount: 21 };     // Day scale: add 21 days (~1680px)
+            default: return { unit: "month", amount: 3 };
+        }
+    }
+
+    function checkAndExpandTimeline() {
+        if (isExpandingTimeline || isTaskDragging || isMouseDownOnTimeline) return;
+        if (!gantt.$task || !gantt.$task_data) return;
+
+        const s = gantt.getScrollState();
+        const visibleWidth = gantt.$task.offsetWidth || s.inner_width || 0;
+        const totalWidth = s.width || (gantt.$task_data ? gantt.$task_data.offsetWidth : 0);
+
+        // If the entire timeline fits inside the viewport, no scrolling or expansion is needed
+        if (totalWidth <= visibleWidth + 10) return;
+
+        const distFromLeft = s.x;
+        const distFromRight = totalWidth - (s.x + visibleWidth);
+        const threshold = Math.max(120, (gantt.config.min_column_width || 50) * 1.5);
+
+        const state = gantt.getState();
+        const curMinDate = gantt.config.start_date || state.min_date;
+        const curMaxDate = gantt.config.end_date || state.max_date;
+        if (!curMinDate || !curMaxDate) return;
+
+        const step = getExpansionStep();
+
+        if (distFromLeft < threshold && distFromRight < threshold) {
+            // Close to both edges: expand only the edge the user is closer to
+            if (s.x <= 10) {
+                expandLeft();
+            } else {
+                expandRight();
+            }
+        } else if (distFromLeft < threshold) {
+            expandLeft();
+        } else if (distFromRight < threshold) {
+            expandRight();
+        }
+
+        function expandLeft() {
+            const oldStartDate = new Date(curMinDate);
+            const newStartDate = gantt.date.add(oldStartDate, -step.amount, step.unit);
+            gantt.config.start_date = newStartDate;
+            if (!gantt.config.end_date) gantt.config.end_date = new Date(curMaxDate);
+
+            isExpandingTimeline = true;
+            gantt.render();
+            const shiftPixels = gantt.posFromDate(oldStartDate);
+            gantt.scrollTo(s.x + shiftPixels, s.y);
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
+        }
+
+        function expandRight() {
+            const oldEndDate = new Date(curMaxDate);
+            const newEndDate = gantt.date.add(oldEndDate, step.amount, step.unit);
+            gantt.config.end_date = newEndDate;
+            if (!gantt.config.start_date) gantt.config.start_date = new Date(curMinDate);
+
+            isExpandingTimeline = true;
+            gantt.render();
+            gantt.scrollTo(s.x, s.y);
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
+        }
+    }
 
     let scrollSaveTimeout = null;
     let scrollExpandTimeout = null;
-    
-    // Infinite scroll logic for manual panning / timeline dragging
+
     gantt.attachEvent("onGanttScroll", function(left, top) {
+        if (isExpandingTimeline) return;
+
         clearTimeout(scrollSaveTimeout);
         scrollSaveTimeout = setTimeout(() => saveStateToStorage(false), 1200);
 
         clearTimeout(scrollExpandTimeout);
-        scrollExpandTimeout = setTimeout(function () {
-            const state = gantt.getState();
-            const left_date = gantt.dateFromPos(left);
-            const right_date = gantt.dateFromPos(left + gantt.$task.offsetWidth);
-            
-            if (!left_date || !right_date) return;
-
-            let min_date = gantt.config.start_date || state.min_date || new Date();
-            let max_date = gantt.config.end_date || state.max_date || new Date();
-            
-            let repaint = false;
-            if (+left_date <= +gantt.date.add(min_date, 5, "day")) {
-                gantt.config.start_date = gantt.date.add(min_date, -30, "day");
-                repaint = true;
-            }
-            if (+right_date >= +gantt.date.add(max_date, -5, "day")) {
-                gantt.config.end_date = gantt.date.add(max_date, 30, "day");
-                repaint = true;
-            }
-            
-            if (repaint) {
-                const scrollState = gantt.getScrollState();
-                const anchorDate = gantt.dateFromPos(scrollState.x + gantt.$task.offsetWidth / 2);
-                gantt.render();
-                const newAnchorPos = gantt.posFromDate(anchorDate);
-                gantt.scrollTo(newAnchorPos - gantt.$task.offsetWidth / 2, scrollState.y);
-            }
-        }, 100);
+        scrollExpandTimeout = setTimeout(checkAndExpandTimeline, 150);
     });
 
     // ===================================================================
@@ -1642,14 +1759,22 @@
                 const searchEl = document.querySelector('.search-header-input');
                 if(searchEl) searchEl.value = "";
 
+                // Reset fixed date bounds so new data can naturally define the timescale
+                gantt.config.start_date = null;
+                gantt.config.end_date = null;
+
                 reinitTodayMarker();
                 const parsedData = processGanttData(JSON.parse(ev.target.result));
+                isExpandingTimeline = true;
                 gantt.parse(parsedData);
                 if (!parsedData.data || parsedData.data.length === 0) {
                     showToday();
                 }
                 rebuildAllLinkStyles();
-                setTimeout(() => saveStateToStorage(true), 300);
+                setTimeout(() => {
+                    isExpandingTimeline = false;
+                    saveStateToStorage(true);
+                }, 300);
             } catch (err) { alert("Error parsing JSON"); }
         };
         reader.readAsText(e.target.files[0]);
@@ -1674,12 +1799,31 @@
         const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale");
 
         if (isTimelineContainer && !isGrid) {
+            // Horizontal scroll with Shift + wheel
+            if (event.shiftKey) {
+                event.preventDefault();
+                event.stopPropagation();
+                const scrollState = gantt.getScrollState();
+                const delta = event.deltaY || event.deltaX;
+                gantt.scrollTo(Math.max(0, scrollState.x + delta), scrollState.y);
+                return;
+            }
+
+            // Trackpad horizontal swipe (pan) - allow native horizontal scrolling
+            if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+                return;
+            }
+
+            // Ignore subpixel / zero delta
+            if (Math.abs(event.deltaY) < 1) {
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
 
             const now = Date.now();
-            if (now - lastZoomTime < 60) return false;
-            lastZoomTime = now;
+            if (now - lastZoomTime < 70) return false;
 
             const taskRect = gantt.$task.getBoundingClientRect();
             const offsetY = event.clientY - taskRect.top;
@@ -1687,7 +1831,10 @@
             const isHeader = offsetY < headerHeight;
 
             const nextIndex = event.deltaY < 0 ? currentZoomIndex + 1 : currentZoomIndex - 1;
-            applyZoom(nextIndex, event.clientX, event.clientY, isHeader);
+            if (nextIndex >= 0 && nextIndex < zoomLevels.length && nextIndex !== currentZoomIndex) {
+                lastZoomTime = now;
+                applyZoom(nextIndex, event.clientX, event.clientY, isHeader);
+            }
         }
     }, { passive: false, capture: true });
 
@@ -1723,7 +1870,10 @@
                 const taskRect = gantt.$task.getBoundingClientRect();
                 const headerHeight = gantt.config.scale_height || 60;
                 const inHeader = (midY - taskRect.top) < headerHeight;
-                applyZoom(currentZoomIndex + (ratio > 1 ? 1 : -1), midX, midY, inHeader);
+                const targetIndex = currentZoomIndex + (ratio > 1 ? 1 : -1);
+                if (targetIndex >= 0 && targetIndex < zoomLevels.length && targetIndex !== currentZoomIndex) {
+                    applyZoom(targetIndex, midX, midY, inHeader);
+                }
             }
             pinchState.distance = newDistance;
         }
@@ -1737,13 +1887,16 @@
 
     function zoomStepFromUI(delta) {
         const now = Date.now();
-        if (now - lastZoomTime < 100) return;
+        if (now - lastZoomTime < 80) return;
+        const targetIndex = currentZoomIndex + delta;
+        if (targetIndex < 0 || targetIndex >= zoomLevels.length || targetIndex === currentZoomIndex) return;
+
         lastZoomTime = now;
         const taskRect = gantt.$task.getBoundingClientRect();
         const headerHeight = gantt.config.scale_height || 60;
         const centerX = taskRect.left + taskRect.width / 2;
         const centerY = taskRect.top + headerHeight + Math.max(0, (taskRect.height - headerHeight) / 2);
-        applyZoom(currentZoomIndex + delta, centerX, centerY, false);
+        applyZoom(targetIndex, centerX, centerY, false);
     }
     document.getElementById('zoomInBtn').addEventListener('click', () => zoomStepFromUI(+1));
     document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStepFromUI(-1));
@@ -1759,8 +1912,10 @@
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
+            isExpandingTimeline = true;
             gantt.render();
             restoreSearchInput();
+            setTimeout(() => { isExpandingTimeline = false; }, 100);
         }, 250);
     });
 
