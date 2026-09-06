@@ -1174,6 +1174,24 @@
         if (labelEl) labelEl.textContent = zoomLevels[currentZoomIndex].name;
     }
 
+    function getProjectDateRange() {
+        let minDate = null;
+        let maxDate = null;
+        gantt.eachTask(function(task) {
+            if (task.start_date) {
+                const start = new Date(task.start_date);
+                if (!minDate || start < minDate) minDate = start;
+            }
+            if (task.end_date) {
+                const end = new Date(task.end_date);
+                if (!maxDate || end > maxDate) maxDate = end;
+            }
+        });
+        if (!minDate) minDate = new Date();
+        if (!maxDate) maxDate = gantt.date.add(minDate, 1, "month");
+        return { minDate, maxDate };
+    }
+
     function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
         if (!gantt.$task) return;
         if (nextIndex < 0) nextIndex = 0;
@@ -1187,7 +1205,7 @@
         const absoluteX = state.x + offsetX;
         const absoluteY = state.y + offsetY;
 
-        const cursorDate = gantt.dateFromPos(absoluteX);
+        const cursorDate = gantt.dateFromPos(absoluteX) || new Date();
         const cursorRowIndex = activeRowHeight > 0 ? absoluteY / activeRowHeight : 0;
 
         const nextLevel = zoomLevels[nextIndex];
@@ -1202,6 +1220,23 @@
             activeRowHeight = nextLevel.row_height;
             gantt.config.row_height = activeRowHeight;
         }
+
+        // Adapt date bounds to dynamically change the visualized time span for the zoom level
+        const projRange = getProjectDateRange();
+        const refMin = new Date(Math.min(cursorDate.getTime(), projRange.minDate.getTime()));
+        const refMax = new Date(Math.max(cursorDate.getTime(), projRange.maxDate.getTime()));
+
+        const paddingByZoom = [
+            { unit: "year", before: 8, after: 12 },    // Year view: multi-decade span
+            { unit: "year", before: 3, after: 4 },     // Quarter view: multi-year span
+            { unit: "month", before: 12, after: 18 },  // Month view: 2-3 year span
+            { unit: "day", before: 30, after: 60 },    // Week view: several months span
+            { unit: "day", before: 15, after: 30 }     // Day view: 1-2 months span
+        ];
+        const pad = paddingByZoom[currentZoomIndex];
+
+        gantt.config.start_date = gantt.date.add(refMin, -pad.before, pad.unit);
+        gantt.config.end_date = gantt.date.add(refMax, pad.after, pad.unit);
 
         isExpandingTimeline = true;
         gantt.render();
@@ -1237,7 +1272,6 @@
         gantt.config.min_column_width = level.min_column_width;
         gantt.config.scale_height = level.scale_height;
         gantt.config.row_height = activeRowHeight;
-        gantt.config.fit_tasks = true;
         gantt.init("gantt_here");
         updateZoomLabel();
     }
@@ -1534,7 +1568,7 @@
 
     gantt.attachEvent("onTaskDrag", function(id, mode, task, original) {
         // Built-in autoscroll handles moving the timeline as the task nears the viewport edges.
-        // We purposefully avoid re-rendering here to prevent DOM destruction and stutter during active drag.
+        // We avoid calling gantt.render() here to prevent DOM destruction and stutter during active drag.
     });
 
     gantt.attachEvent("onAfterTaskDrag", function(id, mode, e) {
@@ -1566,66 +1600,51 @@
         scheduleSave();
     });
 
-    // Panning & scroll expansion logic
-    let isMouseDownOnTimeline = false;
-    document.addEventListener('mousedown', function(e) {
-        if (e.target && e.target.closest && e.target.closest('#gantt_here .gantt_task')) {
-            isMouseDownOnTimeline = true;
-        }
-    });
-    document.addEventListener('mouseup', function() {
-        if (isMouseDownOnTimeline) {
-            isMouseDownOnTimeline = false;
-            clearTimeout(scrollExpandTimeout);
-            scrollExpandTimeout = setTimeout(checkAndExpandTimeline, 80);
-        }
-    });
-    document.addEventListener('touchend', function() {
-        if (isMouseDownOnTimeline) {
-            isMouseDownOnTimeline = false;
-            clearTimeout(scrollExpandTimeout);
-            scrollExpandTimeout = setTimeout(checkAndExpandTimeline, 80);
-        }
-    });
-    document.addEventListener('touchcancel', function() {
-        isMouseDownOnTimeline = false;
-    });
-
     function getExpansionStep() {
         switch (currentZoomIndex) {
-            case 0: return { unit: "year", amount: 3 };     // Year scale: add 3 years (~90-300px)
-            case 1: return { unit: "month", amount: 18 };   // Quarter scale: add 6 quarters (18 months ~540px)
-            case 2: return { unit: "month", amount: 6 };    // Month scale: add 6 months (~720px)
-            case 3: return { unit: "week", amount: 8 };     // Week scale: add 8 weeks (~560-800px)
-            case 4: return { unit: "day", amount: 21 };     // Day scale: add 21 days (~1680px)
-            default: return { unit: "month", amount: 3 };
+            case 0: return { unit: "year", amount: 4 };     // Year scale: add 4 years
+            case 1: return { unit: "month", amount: 18 };   // Quarter scale: add 18 months
+            case 2: return { unit: "month", amount: 6 };    // Month scale: add 6 months
+            case 3: return { unit: "day", amount: 25 };     // Week scale: add 25 days
+            case 4: return { unit: "day", amount: 15 };     // Day scale: add 15 days
+            default: return { unit: "month", amount: 6 };
         }
     }
 
     function checkAndExpandTimeline() {
-        if (isExpandingTimeline || isTaskDragging || isMouseDownOnTimeline) return;
-        if (!gantt.$task || !gantt.$task_data) return;
+        if (isExpandingTimeline || isTaskDragging) return;
+        if (!gantt.$task) return;
 
         const s = gantt.getScrollState();
-        const visibleWidth = gantt.$task.offsetWidth || s.inner_width || 0;
-        const totalWidth = s.width || (gantt.$task_data ? gantt.$task_data.offsetWidth : 0);
-
-        // If the entire timeline fits inside the viewport, no scrolling or expansion is needed
-        if (totalWidth <= visibleWidth + 10) return;
-
-        const distFromLeft = s.x;
-        const distFromRight = totalWidth - (s.x + visibleWidth);
-        const threshold = Math.max(120, (gantt.config.min_column_width || 50) * 1.5);
+        const visibleWidth = gantt.$task.offsetWidth;
+        if (!visibleWidth) return;
 
         const state = gantt.getState();
         const curMinDate = gantt.config.start_date || state.min_date;
         const curMaxDate = gantt.config.end_date || state.max_date;
         if (!curMinDate || !curMaxDate) return;
 
+        const totalWidth = gantt.posFromDate(curMaxDate);
+        if (totalWidth <= visibleWidth) {
+            // Viewport is wider than timeline: expand both sides to fill screen
+            const step = getExpansionStep();
+            gantt.config.start_date = gantt.date.add(curMinDate, -step.amount * 2, step.unit);
+            gantt.config.end_date = gantt.date.add(curMaxDate, step.amount * 2, step.unit);
+            isExpandingTimeline = true;
+            gantt.render();
+            const shiftPixels = gantt.posFromDate(curMinDate);
+            gantt.scrollTo(s.x + shiftPixels, s.y);
+            setTimeout(() => { isExpandingTimeline = false; }, 120);
+            return;
+        }
+
+        const distFromLeft = s.x;
+        const distFromRight = totalWidth - (s.x + visibleWidth);
+        const threshold = Math.max(150, (gantt.config.min_column_width || 50) * 2);
+
         const step = getExpansionStep();
 
         if (distFromLeft < threshold && distFromRight < threshold) {
-            // Close to both edges: expand only the edge the user is closer to
             if (s.x <= 10) {
                 expandLeft();
             } else {
@@ -1647,7 +1666,7 @@
             gantt.render();
             const shiftPixels = gantt.posFromDate(oldStartDate);
             gantt.scrollTo(s.x + shiftPixels, s.y);
-            setTimeout(() => { isExpandingTimeline = false; }, 100);
+            setTimeout(() => { isExpandingTimeline = false; }, 120);
         }
 
         function expandRight() {
@@ -1659,7 +1678,7 @@
             isExpandingTimeline = true;
             gantt.render();
             gantt.scrollTo(s.x, s.y);
-            setTimeout(() => { isExpandingTimeline = false; }, 100);
+            setTimeout(() => { isExpandingTimeline = false; }, 120);
         }
     }
 
@@ -1759,7 +1778,6 @@
                 const searchEl = document.querySelector('.search-header-input');
                 if(searchEl) searchEl.value = "";
 
-                // Reset fixed date bounds so new data can naturally define the timescale
                 gantt.config.start_date = null;
                 gantt.config.end_date = null;
 
@@ -1767,8 +1785,29 @@
                 const parsedData = processGanttData(JSON.parse(ev.target.result));
                 isExpandingTimeline = true;
                 gantt.parse(parsedData);
+
+                const projRange = getProjectDateRange();
+                const paddingByZoom = [
+                    { unit: "year", before: 8, after: 12 },
+                    { unit: "year", before: 3, after: 4 },
+                    { unit: "month", before: 12, after: 18 },
+                    { unit: "day", before: 30, after: 60 },
+                    { unit: "day", before: 15, after: 30 }
+                ];
+                const pad = paddingByZoom[currentZoomIndex];
+                gantt.config.start_date = gantt.date.add(projRange.minDate, -pad.before, pad.unit);
+                gantt.config.end_date = gantt.date.add(projRange.maxDate, pad.after, pad.unit);
+                gantt.render();
+
                 if (!parsedData.data || parsedData.data.length === 0) {
                     showToday();
+                } else {
+                    const firstTask = parsedData.data[0];
+                    if (firstTask && firstTask.start_date) {
+                        const targetDate = new Date(firstTask.start_date);
+                        const pos = gantt.posFromDate(targetDate);
+                        gantt.scrollTo(Math.max(0, pos - 100), 0);
+                    }
                 }
                 rebuildAllLinkStyles();
                 setTimeout(() => {
