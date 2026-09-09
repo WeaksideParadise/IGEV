@@ -230,9 +230,7 @@
             flex: 0 0 auto; gap: 8px; flex-wrap: wrap;
         }
 
-        .brand-area {
-            display: flex; align-items: center; gap: 10px;
-        }
+        .brand-area { display: flex; align-items: center; gap: 10px; }
         .controls h2 {
             margin: 0; font-size: 1.15rem; color: var(--text);
             font-family: var(--font-display);
@@ -251,9 +249,7 @@
             font-weight: 500;
         }
 
-        .toolbar-group {
-            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-        }
+        .toolbar-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
         button {
             background-color: var(--bg-raised);
@@ -276,11 +272,7 @@
             border-color: var(--accent);
         }
         button:active { transform: translateY(1px); }
-        button:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
+        button:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
         button.primary-btn {
             background: var(--accent);
@@ -288,9 +280,7 @@
             border-color: var(--accent);
             font-weight: 600;
         }
-        button.primary-btn:hover {
-            filter: brightness(1.15);
-        }
+        button.primary-btn:hover { filter: brightness(1.15); }
 
         button.secondary {
             background-color: transparent;
@@ -320,12 +310,7 @@
             color: var(--bg);
         }
 
-        /* Search input in toolbar */
-        .search-container {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
+        .search-container { position: relative; display: inline-flex; align-items: center; }
         .search-input {
             width: 140px;
             transition: width 0.25s ease, border-color 0.2s ease;
@@ -338,24 +323,13 @@
             font-family: var(--font-body);
             outline: none;
         }
-        .search-input:focus {
-            width: 190px;
-            border-color: var(--accent);
-        }
-        .search-input::placeholder {
-            color: var(--text-faint);
-        }
+        .search-input:focus { width: 190px; border-color: var(--accent); }
+        .search-input::placeholder { color: var(--text-faint); }
         .search-clear {
-            position: absolute;
-            right: 8px;
-            background: none;
-            border: none;
-            color: var(--text-faint);
-            cursor: pointer;
-            padding: 0;
-            font-size: 0.85rem;
-            line-height: 1;
-            display: none;
+            position: absolute; right: 8px;
+            background: none; border: none;
+            color: var(--text-faint); cursor: pointer;
+            padding: 0; font-size: 0.85rem; line-height: 1; display: none;
         }
         .search-clear:hover { color: var(--accent-3); background: transparent; }
         .search-count-badge {
@@ -385,15 +359,12 @@
             background-repeat: no-repeat;
             background-position: right 8px center;
         }
-        .theme-select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
+        .theme-select:focus { outline: none; border-color: var(--accent); }
 
         #fileInput, #linkColorInput { display: none; }
 
         /* ==========================================================
-           GANTT CANVAS & FULL DIAGRAM LINES (FIXED)
+           GANTT CANVAS & FULL-HEIGHT DIAGRAM LINES FIX
            ========================================================== */
         #gantt_here {
             width: 100%;
@@ -405,15 +376,30 @@
             color: var(--text);
         }
 
-        /* Dual-layer horizontal row lines: guarantees full canvas lines everywhere */
-        .gantt_task_bg, .gantt_grid_data, .gantt_data_area {
+        /* Guarantee .gantt_data_area always spans full viewport height even with 0 tasks */
+        .gantt_data_area {
+            min-height: calc(100% - 50px) !important;
+            height: auto !important;
             background-color: var(--bg-surface) !important;
             background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px) !important;
             background-size: 100% var(--active-row-height, 35px) !important;
             background-repeat: repeat-y !important;
         }
 
-        /* Empty diagram filler rows (keeps full-height grid/timeline structure alive) */
+        .gantt_task_bg {
+            min-height: 100% !important;
+            height: 100% !important;
+            background-color: transparent !important;
+        }
+
+        .gantt_grid_data {
+            background-color: var(--bg-surface) !important;
+            background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px) !important;
+            background-size: 100% var(--active-row-height, 35px) !important;
+            background-repeat: repeat-y !important;
+            min-height: 100% !important;
+        }
+
         .gantt_filler_row {
             pointer-events: auto;
             cursor: cell;
@@ -430,37 +416,69 @@
             box-sizing: border-box;
         }
 
-        /* Today Marker spans full height */
-        .gantt_marker_area, .gantt_marker {
-            height: 100% !important;
+        /* ==========================================================
+           CRITICAL FIX: TODAY MARKER (ALWAYS VISIBLE & FULL HEIGHT)
+           ========================================================== */
+        .gantt_marker_area {
+            position: absolute !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
             min-height: 100% !important;
-            pointer-events: none;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 5 !important;
+        }
+        .gantt_marker {
+            position: absolute !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            min-height: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+            z-index: 5 !important;
         }
         .today {
-            background: none !important;
+            background: transparent !important;
             border-left: 2px dashed var(--accent) !important;
-            width: 0 !important;
-            box-shadow: 0 0 12px var(--accent);
-            opacity: 0.9;
+            width: 2px !important;
+            box-sizing: border-box !important;
+            box-shadow: 0 0 10px var(--accent) !important;
+            opacity: 0.95 !important;
+        }
+        .today .gantt_marker_content {
+            background: var(--accent) !important;
+            color: var(--bg) !important;
+            font-family: var(--font-mono) !important;
+            font-size: 0.7rem !important;
+            font-weight: 700 !important;
+            padding: 2px 7px !important;
+            border-radius: 0 0 4px 4px !important;
+            white-space: nowrap !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: -1px !important;
+            transform: translateX(-50%) !important;
+            display: inline-block !important;
         }
 
         .weekend { background: var(--weekend-bg) !important; }
 
         /* ==========================================================
-           EMPTY STATE OVERLAY (UX)
+           EMPTY STATE OVERLAY
            ========================================================== */
         .empty-state-overlay {
             position: absolute;
-            top: 60px; left: 0; right: 0; bottom: 0;
+            top: 50px; left: 0; right: 0; bottom: 0;
             display: none;
             align-items: center;
             justify-content: center;
             pointer-events: none;
-            z-index: 5;
+            z-index: 4;
         }
-        .empty-state-overlay.visible {
-            display: flex;
-        }
+        .empty-state-overlay.visible { display: flex; }
         .empty-state-card {
             pointer-events: auto;
             background: var(--bg-panel);
@@ -476,10 +494,7 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .empty-state-card .icon {
-            font-size: 2.2rem;
-            margin-bottom: 8px;
-        }
+        .empty-state-card .icon { font-size: 2.2rem; margin-bottom: 8px; }
         .empty-state-card h3 {
             margin: 0 0 6px 0;
             color: var(--text);
@@ -493,10 +508,7 @@
             line-height: 1.45;
         }
         .empty-state-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
+            display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
         }
         .empty-state-tip {
             margin-top: 14px;
@@ -523,7 +535,6 @@
             letter-spacing: 0.04em;
             font-size: 0.72rem !important;
         }
-        .gantt_grid_data { background: var(--bg-surface) !important; }
         .gantt_row {
             background: var(--bg-surface) !important;
             border-bottom: 1px solid var(--border) !important;
@@ -534,12 +545,9 @@
             border-right-color: var(--border) !important;
             font-family: var(--font-body) !important;
         }
-        .gantt_row.gantt_selected {
-            background: var(--selected-bg) !important;
-        }
+        .gantt_row.gantt_selected { background: var(--selected-bg) !important; }
         .gantt_row.gantt_selected .gantt_cell {
-            color: var(--accent) !important;
-            font-weight: 600;
+            color: var(--accent) !important; font-weight: 600;
         }
 
         .gantt_task { background: var(--bg-surface) !important; }
@@ -607,7 +615,6 @@
             border-color: var(--accent) !important;
         }
 
-        /* Add Button in Grid (+) */
         .gantt_add, .gantt_grid_head_add {
             background-image: none !important;
             position: relative !important;
@@ -627,11 +634,9 @@
             line-height: 1;
             pointer-events: none;
         }
-        .gantt_add:hover::before, .gantt_grid_head_add:hover::before {
-            color: var(--accent);
-        }
+        .gantt_add:hover::before, .gantt_grid_head_add:hover::before { color: var(--accent); }
 
-        /* Lightbox & Dialogs */
+        /* Lightbox */
         .gantt_cal_light, .gantt_cal_light_wide {
             background: var(--bg-panel) !important;
             border: 1px solid var(--border-strong) !important;
@@ -693,17 +698,10 @@
             border-color: var(--accent) !important;
             color: var(--bg) !important;
         }
-        .gantt_btn_set:hover {
-            filter: brightness(1.1) !important;
-        }
-        .gantt_close_lightbox {
-            color: var(--text-faint) !important;
-        }
-        .gantt_close_lightbox:hover {
-            color: var(--accent-3) !important;
-        }
+        .gantt_btn_set:hover { filter: brightness(1.1) !important; }
+        .gantt_close_lightbox { color: var(--text-faint) !important; }
+        .gantt_close_lightbox:hover { color: var(--accent-3) !important; }
 
-        /* Tooltip */
         .gantt_tooltip {
             background: var(--bg-panel) !important;
             color: var(--text) !important;
@@ -713,15 +711,10 @@
             padding: 8px 12px !important;
             border-radius: 4px !important;
         }
-        .gantt_tooltip_header {
-            color: var(--text) !important;
-            font-weight: 600;
-        }
-        .gantt_tooltip_body {
-            color: var(--text-dim) !important;
-        }
+        .gantt_tooltip_header { color: var(--text) !important; font-weight: 600; }
+        .gantt_tooltip_body { color: var(--text-dim) !important; }
 
-        /* Zoom controls */
+        /* Floating Zoom controls */
         .zoom-controls {
             position: fixed;
             right: max(14px, env(safe-area-inset-right));
@@ -752,7 +745,7 @@
             font-family: var(--font-mono);
         }
 
-        /* Modals: Link Editor & Shortcuts */
+        /* Modals */
         .modal-backdrop {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
@@ -840,10 +833,7 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Responsive */
-        @media (max-width: 900px) {
-            .hide-mobile { display: none !important; }
-        }
+        @media (max-width: 900px) { .hide-mobile { display: none !important; } }
         @media (max-width: 768px) {
             .controls { padding: 6px 10px; }
             .controls h2 { font-size: 1rem; }
@@ -863,7 +853,7 @@
 
 <div class="controls">
     <div class="brand-area">
-        <h2>IGEV <span class="badge-version">v2.4</span></h2>
+        <h2>IGEV <span class="badge-version">v2.5</span></h2>
         <div class="search-container">
             <input type="text" id="globalSearchInput" class="search-input" placeholder="🔍 Search tasks..." autocomplete="off">
             <button id="searchClearBtn" class="search-clear" title="Clear search">✕</button>
@@ -872,32 +862,23 @@
     </div>
 
     <div class="toolbar-group">
-        <!-- History / Undo & Redo -->
         <button id="undoBtn" class="secondary" title="Undo (Ctrl+Z)" disabled>↩ Undo</button>
         <button id="redoBtn" class="secondary" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
-
-        <!-- Task Actions -->
         <button class="primary-btn" onclick="quickAddTask()" title="Add Task at Current View">➕ Task</button>
         <button class="secondary" onclick="showToday()" title="Jump to Today (Space)">📅 Today</button>
         <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Toggle List/Timeline Panel">📋 List</button>
         <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap dates to scale boundaries">🧲 Snap: Off</button>
-
-        <!-- Import / Export & Sample -->
         <button class="secondary" onclick="document.getElementById('fileInput').click()" title="Load Gantt JSON">📂 Import</button>
         <button class="secondary" onclick="saveData()" title="Download JSON file">💾 Export</button>
         <button class="secondary hide-mobile" onclick="exportCSV()" title="Export spreadsheet CSV">📊 CSV</button>
-        
-        <!-- Theme & Utilities -->
         <select id="themeSelector" class="theme-select" title="Switch color theme">
             <option value="void">🌌 Void</option>
             <option value="light">☀️ Light</option>
             <option value="amber">🔶 Amber</option>
             <option value="matrix">💚 Matrix</option>
         </select>
-        
         <button class="secondary" onclick="openShortcutsModal()" title="Help & Shortcuts (?)">❓</button>
         <button class="danger" onclick="clearSavedState()" title="Reset all data">🗑️</button>
-        
         <input type="file" id="fileInput" accept=".json">
         <input type="color" id="linkColorInput">
     </div>
@@ -905,18 +886,18 @@
 
 <div id="gantt_here"></div>
 
-<!-- Empty State Overlay (Shows when 0 elements exist, over full diagram lines) -->
+<!-- Empty State Overlay -->
 <div id="emptyStateOverlay" class="empty-state-overlay">
     <div class="empty-state-card">
         <div class="icon">📊</div>
         <h3>Your Gantt Canvas is Ready</h3>
-        <p>There are no tasks scheduled yet. Double-click anywhere on the diagram to create your first task, or pick an option below.</p>
+        <p>There are no tasks scheduled yet. Click and drag to pan across time, double-click anywhere to create a task, or pick an option below.</p>
         <div class="empty-state-actions">
             <button class="primary-btn" onclick="loadSampleProject()">✨ Load Sample Project</button>
             <button class="secondary" onclick="quickAddTask()">➕ New Task</button>
             <button class="secondary" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
         </div>
-        <div class="empty-state-tip">Tip: Double-click any empty cell to quick-create at that date.</div>
+        <div class="empty-state-tip">Tip: Double-click any empty grid cell to create a task at that date.</div>
     </div>
 </div>
 
@@ -927,7 +908,6 @@
     <button id="zoomOutBtn" aria-label="Zoom out" title="Zoom out (－)">－</button>
 </div>
 
-<!-- Save feedback toast -->
 <div class="save-indicator" id="saveIndicator">✓ Saved</div>
 
 <!-- Dependency Link Editor Modal -->
@@ -955,11 +935,12 @@
     </div>
 </div>
 
-<!-- Help & Keyboard Shortcuts Modal -->
+<!-- Keyboard Shortcuts Modal -->
 <div id="shortcutsModal" class="modal-backdrop">
     <div class="modal-card" style="width: 480px;">
         <h3>Keyboard & Navigation Guide</h3>
         <table class="shortcuts-table">
+            <tr><td><kbd>Mouse Drag</kbd></td><td>Pan diagram continuously in all directions</td></tr>
             <tr><td><kbd>Space</kbd></td><td>Jump viewport to Today</td></tr>
             <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Cmd</kbd> + <kbd>Z</kbd></td><td>Undo last action</td></tr>
             <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Cmd</kbd> + <kbd>Y</kbd></td><td>Redo last action</td></tr>
@@ -979,6 +960,7 @@
 
 <script>
     let isExpandingTimeline = false;
+    let todayMarkerId = null;
 
     // ===================================================================
     // THEME MANAGEMENT
@@ -1008,6 +990,7 @@
             isExpandingTimeline = true;
             gantt.render();
             renderFullGridLines();
+            updateTodayMarker();
             setTimeout(() => { isExpandingTimeline = false; }, 100);
         }
     }
@@ -1031,7 +1014,6 @@
         const serialized = JSON.stringify(gantt.serialize());
         if (historyPointer >= 0 && historyStack[historyPointer] === serialized) return;
 
-        // Cut future redo states
         historyStack.splice(historyPointer + 1);
         historyStack.push(serialized);
         if (historyStack.length > MAX_HISTORY) historyStack.shift();
@@ -1048,6 +1030,7 @@
             gantt.parse(state);
             rebuildAllLinkStyles();
             renderFullGridLines();
+            updateTodayMarker();
             updateEmptyState();
             updateUndoRedoUI();
             scheduleSave();
@@ -1064,6 +1047,7 @@
             gantt.parse(state);
             rebuildAllLinkStyles();
             renderFullGridLines();
+            updateTodayMarker();
             updateEmptyState();
             updateUndoRedoUI();
             scheduleSave();
@@ -1084,7 +1068,7 @@
     // ===================================================================
     // LOCAL STORAGE PERSISTENCE
     // ===================================================================
-    const STORAGE_KEY = 'igev_gantt_state_v2';
+    const STORAGE_KEY = 'igev_gantt_state_v3';
     let saveTimeout = null;
 
     function showSaveIndicator(text = "✓ Saved") {
@@ -1099,7 +1083,7 @@
         try {
             const scrollState = gantt.getScrollState();
             const state = {
-                version: 5,
+                version: 6,
                 timestamp: Date.now(),
                 data: gantt.serialize(),
                 zoomIndex: currentZoomIndex,
@@ -1109,7 +1093,9 @@
                 scrollX: scrollState.x || 0,
                 scrollY: scrollState.y || 0,
                 snapEnabled: snapEnabled,
-                theme: getCurrentTheme()
+                theme: getCurrentTheme(),
+                startDate: gantt.config.start_date ? gantt.config.start_date.toISOString() : null,
+                endDate: gantt.config.end_date ? gantt.config.end_date.toISOString() : null
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             if (showToast) showSaveIndicator("✓ Saved");
@@ -1149,16 +1135,13 @@
     }
 
     // ===================================================================
-    // TOUCH / POINTER SPECS
+    // CUSTOM COLOR PICKER & SNAP
     // ===================================================================
     const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
 
-    // ===================================================================
-    // CUSTOM COLOR PICKER
-    // ===================================================================
     gantt.form_blocks["color_picker"] = {
-        render: function (sns) {
+        render: function () {
             return "<div style='display:flex;align-items:center;padding:4px 0;'><input type='color' style='width:100%;height:32px;border:1px solid var(--border);cursor:pointer;background:var(--bg-raised);'></div>";
         },
         set_value: function (node, value, task) {
@@ -1167,27 +1150,21 @@
             if (task.type === "project") defaultColor = getThemeColor('project');
             node.querySelector("input").value = value || defaultColor;
         },
-        get_value: function (node, task) { return node.querySelector("input").value; },
+        get_value: function (node) { return node.querySelector("input").value; },
         focus: function (node) { node.querySelector("input").focus(); }
     };
 
-    // ===================================================================
-    // MAGNETISM / SNAP
-    // ===================================================================
     let snapEnabled = false;
-
     function applyMagnetismState() {
         gantt.config.round_dnd_dates = snapEnabled;
         gantt.config.round_task_dates = snapEnabled;
     }
-
     function toggleMagnetism(forceState) {
         snapEnabled = (forceState === undefined) ? !snapEnabled : !!forceState;
         applyMagnetismState();
         updateMagnetBtn();
         scheduleSave();
     }
-
     function updateMagnetBtn() {
         const btn = document.getElementById('magnetToggleBtn');
         if (!btn) return;
@@ -1203,7 +1180,7 @@
     }
 
     // ===================================================================
-    // GANTT CONFIGURATION
+    // GANTT CONFIGURATION & PLUGINS
     // ===================================================================
     gantt.config.order_branch = true;
     gantt.config.order_branch_free = true;
@@ -1232,7 +1209,6 @@
         {name: "text_color", height: 32, map_to: "textColor", type: "color_picker"},
         {name: "time", height: 72, type: "duration", map_to: "auto"}
     ];
-
     gantt.config.lightbox.sections = commonSections;
     gantt.config.lightbox.project_sections = [
         {name: "type", type: "typeselect", map_to: "type"},
@@ -1253,6 +1229,7 @@
     gantt.templates.timeline_cell_class = (task, date) => (date.getDay() === 0 || date.getDay() === 6) ? "weekend" : "";
     gantt.templates.link_class = (link) => "link_id_" + link.id;
 
+    // Enable marker, drag_timeline for mouse panning, and tooltip
     gantt.plugins({
         tooltip: true,
         drag_timeline: true,
@@ -1264,7 +1241,7 @@
     gantt.config.autoscroll_speed = 25;
 
     // ===================================================================
-    // ZOOM TIERS
+    // ZOOM TIERS & TIMELINE SPAN BUFFER
     // ===================================================================
     const zoomLevels = [
         { name: "year", scale_height: 50, row_height: 28, min_column_width: 32, scales: [{unit: "year", step: 1, format: "%Y"}]},
@@ -1295,9 +1272,28 @@
                 if (!maxDate || end > maxDate) maxDate = end;
             }
         });
-        if (!minDate) minDate = new Date();
-        if (!maxDate) maxDate = gantt.date.add(minDate, 1, "month");
         return { minDate, maxDate };
+    }
+
+    // CRITICAL: Guarantees the timeline is thousands of pixels wider than viewport for instant mouse panning
+    function initTimelineDateRange(refDate) {
+        const projRange = getProjectDateRange();
+        const anchor = refDate || new Date();
+        
+        let refMin = projRange.minDate ? new Date(Math.min(anchor.getTime(), projRange.minDate.getTime())) : anchor;
+        let refMax = projRange.maxDate ? new Date(Math.max(anchor.getTime(), projRange.maxDate.getTime())) : anchor;
+
+        const paddingByZoom = [
+            { unit: "year", before: 8, after: 12 },
+            { unit: "year", before: 3, after: 4 },
+            { unit: "month", before: 12, after: 18 },
+            { unit: "day", before: 40, after: 80 },
+            { unit: "day", before: 20, after: 40 }
+        ];
+        const pad = paddingByZoom[currentZoomIndex] || { unit: "month", before: 12, after: 18 };
+
+        gantt.config.start_date = gantt.date.add(refMin, -pad.before, pad.unit);
+        gantt.config.end_date = gantt.date.add(refMax, pad.after, pad.unit);
     }
 
     function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
@@ -1330,25 +1326,12 @@
             document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
         }
 
-        const projRange = getProjectDateRange();
-        const refMin = new Date(Math.min(cursorDate.getTime(), projRange.minDate.getTime()));
-        const refMax = new Date(Math.max(cursorDate.getTime(), projRange.maxDate.getTime()));
-
-        const paddingByZoom = [
-            { unit: "year", before: 8, after: 12 },
-            { unit: "year", before: 3, after: 4 },
-            { unit: "month", before: 10, after: 14 },
-            { unit: "day", before: 25, after: 45 },
-            { unit: "day", before: 12, after: 24 }
-        ];
-        const pad = paddingByZoom[currentZoomIndex];
-
-        gantt.config.start_date = gantt.date.add(refMin, -pad.before, pad.unit);
-        gantt.config.end_date = gantt.date.add(refMax, pad.after, pad.unit);
+        initTimelineDateRange(cursorDate);
 
         isExpandingTimeline = true;
         gantt.render();
         renderFullGridLines();
+        updateTodayMarker();
         updateZoomLabel();
 
         const newAbsoluteX = gantt.posFromDate(cursorDate);
@@ -1360,6 +1343,31 @@
         scheduleSave();
     }
 
+    // ===================================================================
+    // TODAY MARKER MANAGEMENT (GUARANTEED VISIBLE ON LOAD)
+    // ===================================================================
+    function updateTodayMarker() {
+        const today = new Date();
+        const dateToStr = gantt.date.date_to_str("%d %M %Y");
+
+        if (todayMarkerId) {
+            try { gantt.deleteMarker(todayMarkerId); } catch(e) {}
+            todayMarkerId = null;
+        }
+
+        todayMarkerId = gantt.addMarker({
+            start_date: today,
+            css: "today",
+            text: "Today",
+            title: "Today: " + dateToStr(today)
+        });
+
+        try { gantt.renderMarkers(); } catch(e) {}
+    }
+
+    // ===================================================================
+    // INITIAL MANUAL ZOOM & CANVAS INIT
+    // ===================================================================
     function initManualZoom() {
         const level = zoomLevels[currentZoomIndex];
         gantt.config.scales = level.scales;
@@ -1367,30 +1375,24 @@
         gantt.config.scale_height = level.scale_height;
         gantt.config.row_height = activeRowHeight;
         document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
+        
+        // Initialize expansive dates right away so pan works immediately
+        initTimelineDateRange(new Date());
+
         gantt.init("gantt_here");
+        updateTodayMarker();
         updateZoomLabel();
     }
     initManualZoom();
 
-    function reinitTodayMarker() {
-        const date_to_str = gantt.date.date_to_str(gantt.config.task_date);
-        gantt.addMarker({
-            start_date: new Date(),
-            css: "today",
-            title: "Today: " + date_to_str(new Date())
-        });
-    }
-    reinitTodayMarker();
-
     // ===================================================================
-    // CRITICAL FIX: FULL DIAGRAM LINES AT ALL TIMES (EMPTY CANVAS INCLUDED)
+    // FULL DIAGRAM LINES AT ALL TIMES (EMPTY CANVAS INCLUDED)
     // ===================================================================
     function renderFullGridLines() {
         const taskBg = document.querySelector('.gantt_task_bg');
         const gridData = document.querySelector('.gantt_grid_data');
         if (!taskBg || !gantt.$task) return;
 
-        // Clean out previously injected filler rows
         taskBg.querySelectorAll('.gantt_filler_row').forEach(el => el.remove());
         if (gridData) {
             gridData.querySelectorAll('.gantt_filler_row').forEach(el => el.remove());
@@ -1400,9 +1402,7 @@
         const containerH = gantt.$task.clientHeight || window.innerHeight;
         const taskCount = gantt.getTaskCount();
         const contentH = taskCount * rHeight;
-        
-        // Calculate rows needed to overflow bottom slightly for smooth look
-        const rowsNeeded = Math.max(1, Math.ceil((containerH - contentH + 200) / rHeight));
+        const rowsNeeded = Math.max(1, Math.ceil((containerH - contentH + 300) / rHeight));
 
         const scale = (typeof gantt.getScale === 'function') ? gantt.getScale() : null;
         const colDates = (scale && scale.trace_x) ? scale.trace_x : [];
@@ -1434,7 +1434,6 @@
             tRow.style.display = 'flex';
             tRow.innerHTML = rowCellsHtml;
 
-            // Double click on empty cell creates task at exact date
             tRow.addEventListener('dblclick', function(e) {
                 const rect = tRow.getBoundingClientRect();
                 const scrollX = gantt.getScrollState().x;
@@ -1442,7 +1441,6 @@
                 const date = gantt.dateFromPos(clickX) || new Date();
                 quickAddTaskAt(date);
             });
-
             fragT.appendChild(tRow);
 
             // Grid Row
@@ -1467,11 +1465,43 @@
         }
     }
 
-    gantt.attachEvent("onGanttRender", renderFullGridLines);
-    gantt.attachEvent("onDataRender", renderFullGridLines);
+    gantt.attachEvent("onGanttRender", () => {
+        renderFullGridLines();
+        updateTodayMarker();
+    });
+    gantt.attachEvent("onDataRender", () => {
+        renderFullGridLines();
+        updateTodayMarker();
+    });
 
     // ===================================================================
-    // EMPTY STATE OVERLAY
+    // TODAY VIEWPORT JUMP
+    // ===================================================================
+    function showToday() {
+        if (!gantt.$task) return;
+        const today = new Date();
+        const state = gantt.getState();
+        let min_date = gantt.config.start_date || state.min_date;
+        let max_date = gantt.config.end_date || state.max_date;
+
+        if (!min_date || !max_date || +today <= +min_date || +today >= +max_date) {
+            initTimelineDateRange(today);
+            isExpandingTimeline = true;
+            gantt.render();
+            renderFullGridLines();
+            updateTodayMarker();
+            setTimeout(() => { isExpandingTimeline = false; }, 80);
+        }
+
+        const posX = gantt.posFromDate(today);
+        const containerWidth = gantt.$task.getBoundingClientRect().width;
+        const scrollX = Math.max(0, posX - (containerWidth / 3));
+        gantt.scrollTo(scrollX, gantt.getScrollState().y);
+        updateTodayMarker();
+    }
+
+    // ===================================================================
+    // EMPTY STATE & SAMPLE PROJECT
     // ===================================================================
     function updateEmptyState() {
         const count = gantt.getTaskCount();
@@ -1484,9 +1514,6 @@
         }
     }
 
-    // ===================================================================
-    // SAMPLE PROJECT LOADER (UX)
-    // ===================================================================
     function loadSampleProject() {
         const today = new Date();
         const d = (offsetDays) => gantt.date.add(today, offsetDays, "day");
@@ -1511,42 +1538,16 @@
         };
 
         gantt.clearAll();
+        initTimelineDateRange(today);
         gantt.parse(sample);
         rebuildAllLinkStyles();
+        renderFullGridLines();
+        updateTodayMarker();
         showToday();
         updateEmptyState();
         scheduleSave();
     }
 
-    // ===================================================================
-    // TODAY
-    // ===================================================================
-    function showToday() {
-        if (!gantt.$task) return;
-        const today = new Date();
-        const state = gantt.getState();
-        let min_date = gantt.config.start_date || state.min_date;
-        let max_date = gantt.config.end_date || state.max_date;
-
-        if (min_date && max_date && (+today < +min_date || +today > +max_date)) {
-            const step = getExpansionStep();
-            if (+today < +min_date) gantt.config.start_date = gantt.date.add(today, -step.amount, step.unit);
-            if (+today > +max_date) gantt.config.end_date = gantt.date.add(today, step.amount, step.unit);
-            isExpandingTimeline = true;
-            gantt.render();
-            renderFullGridLines();
-            setTimeout(() => { isExpandingTimeline = false; }, 100);
-        }
-
-        const posX = gantt.posFromDate(today);
-        const containerWidth = gantt.$task.getBoundingClientRect().width;
-        const scrollX = posX - (containerWidth / 3);
-        gantt.scrollTo(Math.max(0, scrollX), gantt.getScrollState().y);
-    }
-
-    // ===================================================================
-    // QUICK ADD TASK
-    // ===================================================================
     function quickAddTaskAt(date) {
         const id = gantt.uid();
         const defaultDate = date || new Date();
@@ -1569,9 +1570,6 @@
         quickAddTaskAt(cursorDate);
     }
 
-    // ===================================================================
-    // GRID TOGGLE
-    // ===================================================================
     function toggleGrid(forceState) {
         const target = (forceState === undefined) ? !gantt.config.show_grid : forceState;
         if (gantt.config.show_grid !== target) {
@@ -1579,6 +1577,7 @@
             isExpandingTimeline = true;
             gantt.render();
             renderFullGridLines();
+            updateTodayMarker();
             setTimeout(() => { isExpandingTimeline = false; }, 100);
             scheduleSave();
         }
@@ -1603,7 +1602,6 @@
         searchClear.style.display = currentSearch ? "block" : "none";
         gantt.refreshData();
 
-        // Update match counter
         if (currentSearch) {
             let matches = 0;
             gantt.eachTask(t => {
@@ -1628,7 +1626,6 @@
         if (!currentSearch) return true;
         if (task.text && task.text.toLowerCase().includes(currentSearch)) return true;
 
-        // Keep parent open if any child matches
         function hasChildMatch(taskId) {
             const kids = gantt.getChildren(taskId);
             for (let i = 0; i < kids.length; i++) {
@@ -1641,9 +1638,6 @@
         return hasChildMatch(id);
     });
 
-    // ===================================================================
-    // DATA PROCESSOR
-    // ===================================================================
     function processGanttData(jsonData) {
         if (jsonData.data && jsonData.data.length > 0 && !jsonData.data[0].subtasks && jsonData.data[0].id) {
             if (jsonData.links) jsonData.links.forEach(l => { if (l.color) injectLinkColorStyle(l.id, l.color); });
@@ -1753,9 +1747,6 @@
         styleSheet.innerText += rule;
     }
 
-    // ===================================================================
-    // FIXED: rebuildAllLinkStyles (Uses gantt.getLinks instead of eachLink)
-    // ===================================================================
     function rebuildAllLinkStyles() {
         const styleSheet = document.getElementById('dynamic-link-styles');
         if (!styleSheet) return;
@@ -1767,11 +1758,11 @@
     }
 
     // ===================================================================
-    // EVENTS & TIMELINE INFINITE EXPANSION
+    // INFINITE SCROLL & TIMELINE AUTO-EXPANSION
     // ===================================================================
-    gantt.attachEvent("onAfterTaskAdd", () => { scheduleSave(); renderFullGridLines(); });
+    gantt.attachEvent("onAfterTaskAdd", () => { scheduleSave(); renderFullGridLines(); updateTodayMarker(); });
     gantt.attachEvent("onAfterTaskUpdate", () => scheduleSave());
-    gantt.attachEvent("onAfterTaskDelete", () => { scheduleSave(); renderFullGridLines(); });
+    gantt.attachEvent("onAfterTaskDelete", () => { scheduleSave(); renderFullGridLines(); updateTodayMarker(); });
     gantt.attachEvent("onAfterTaskMove", () => scheduleSave());
 
     let isTaskDragging = false;
@@ -1798,6 +1789,7 @@
                 isExpandingTimeline = true;
                 gantt.render();
                 renderFullGridLines();
+                updateTodayMarker();
                 setTimeout(() => { isExpandingTimeline = false; }, 100);
             }
         }
@@ -1838,6 +1830,7 @@
             isExpandingTimeline = true;
             gantt.render();
             renderFullGridLines();
+            updateTodayMarker();
             const shift = gantt.posFromDate(oldStart);
             gantt.scrollTo(s.x + shift, s.y);
             setTimeout(() => { isExpandingTimeline = false; }, 120);
@@ -1846,6 +1839,7 @@
             isExpandingTimeline = true;
             gantt.render();
             renderFullGridLines();
+            updateTodayMarker();
             gantt.scrollTo(s.x, s.y);
             setTimeout(() => { isExpandingTimeline = false; }, 120);
         }
@@ -1862,7 +1856,7 @@
     });
 
     // ===================================================================
-    // EXPORT TO CSV (UX)
+    // EXPORT TO CSV
     // ===================================================================
     function exportCSV() {
         const tasks = gantt.getTaskByTime();
@@ -1895,9 +1889,6 @@
         a.click();
     }
 
-    // ===================================================================
-    // FILE IO
-    // ===================================================================
     function saveData() {
         const blob = new Blob([JSON.stringify(gantt.serialize(), null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -1914,9 +1905,11 @@
             try {
                 gantt.clearAll();
                 const parsed = processGanttData(JSON.parse(ev.target.result));
+                initTimelineDateRange(new Date());
                 gantt.parse(parsed);
                 rebuildAllLinkStyles();
                 renderFullGridLines();
+                updateTodayMarker();
                 updateEmptyState();
                 showToday();
                 scheduleSave();
@@ -1928,23 +1921,17 @@
     });
 
     // ===================================================================
-    // KEYBOARD SHORTCUTS MODAL
+    // KEYBOARD SHORTCUTS
     // ===================================================================
-    function openShortcutsModal() {
-        document.getElementById('shortcutsModal').classList.add('show');
-    }
-    function closeShortcutsModal() {
-        document.getElementById('shortcutsModal').classList.remove('show');
-    }
+    function openShortcutsModal() { document.getElementById('shortcutsModal').classList.add('show'); }
+    function closeShortcutsModal() { document.getElementById('shortcutsModal').classList.remove('show'); }
     document.getElementById('shortcutsModal').addEventListener('click', function(e) {
         if (e.target.id === 'shortcutsModal') closeShortcutsModal();
     });
 
-    // Global Key Bindings
     window.addEventListener('keydown', function(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-        // Undo / Redo
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             if (e.shiftKey) redo(); else undo();
@@ -1955,22 +1942,16 @@
             redo();
             return;
         }
-
-        // Search
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
             e.preventDefault();
             searchInput.focus();
             return;
         }
-
-        // Space -> Today
         if (e.code === 'Space') {
             e.preventDefault();
             showToday();
             return;
         }
-
-        // Delete selected task
         if (e.key === 'Delete' || e.key === 'Backspace') {
             const selectedId = gantt.getSelectedId();
             if (selectedId && gantt.isTaskExists(selectedId)) {
@@ -1979,8 +1960,6 @@
             }
             return;
         }
-
-        // Zoom keys
         if (e.key === '+' || e.key === '=') {
             e.preventDefault();
             zoomStepFromUI(1);
@@ -1991,8 +1970,6 @@
             zoomStepFromUI(-1);
             return;
         }
-
-        // Help
         if (e.key === '?') {
             e.preventDefault();
             openShortcutsModal();
@@ -2010,7 +1987,6 @@
         const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale");
 
         if (isTimeline && !isGrid) {
-            // Shift + Wheel = Horizontal Scroll
             if (event.shiftKey) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -2018,7 +1994,6 @@
                 return;
             }
 
-            // Trackpad horizontal swipe
             if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
             if (Math.abs(event.deltaY) < 1) return;
 
@@ -2039,7 +2014,6 @@
         }
     }, { passive: false, capture: true });
 
-    // Pinch Zoom
     let pinchState = null;
     function getTouchDist(t) {
         return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
@@ -2090,7 +2064,7 @@
     document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStepFromUI(-1));
 
     // ===================================================================
-    // INITIALIZATION & STATE RESTORE
+    // INITIALIZATION & STATE RESTORE (FIXED FOR RELOAD & PANNING)
     // ===================================================================
     window.addEventListener('load', () => {
         const saved = loadStateFromStorage();
@@ -2125,10 +2099,19 @@
                 searchInput.value = currentSearch;
             }
 
+            // Restore wide timeline boundaries so panning is immediately active
+            if (saved.startDate && saved.endDate) {
+                gantt.config.start_date = new Date(saved.startDate);
+                gantt.config.end_date = new Date(saved.endDate);
+            } else {
+                initTimelineDateRange(new Date());
+            }
+
             gantt.render();
             gantt.parse(saved.data);
             rebuildAllLinkStyles();
             renderFullGridLines();
+            updateTodayMarker();
             updateEmptyState();
             recordHistory();
 
@@ -2138,28 +2121,37 @@
                 } else {
                     showToday();
                 }
-            }, 100);
+                updateTodayMarker();
+            }, 80);
             return;
         }
 
-        // If no local storage, try default json file, else show empty canvas with full grid lines
+        // Fresh Start: ensure wide date span and render Today line immediately
+        initTimelineDateRange(new Date());
+        gantt.render();
+        updateTodayMarker();
+
         fetch('gantt_data.json')
             .then(r => r.ok ? r.json() : null)
             .then(data => {
                 if (data && (data.data || Array.isArray(data))) {
                     gantt.parse(processGanttData(data));
+                    initTimelineDateRange(new Date());
+                    gantt.render();
                     rebuildAllLinkStyles();
                     showToday();
                 } else {
                     renderFullGridLines();
                     showToday();
                 }
+                updateTodayMarker();
                 updateEmptyState();
                 recordHistory();
             })
             .catch(() => {
                 renderFullGridLines();
                 showToday();
+                updateTodayMarker();
                 updateEmptyState();
                 recordHistory();
             });
@@ -2169,6 +2161,7 @@
         isExpandingTimeline = true;
         gantt.render();
         renderFullGridLines();
+        updateTodayMarker();
         setTimeout(() => { isExpandingTimeline = false; }, 100);
     });
 
