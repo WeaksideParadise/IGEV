@@ -251,7 +251,7 @@
 
         .toolbar-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-        button {
+        button, a.toolbar-btn {
             background-color: var(--bg-raised);
             color: var(--text);
             border: 1px solid var(--border-strong);
@@ -265,29 +265,31 @@
             user-select: none;
             display: inline-flex; align-items: center; gap: 5px;
             white-space: nowrap;
+            text-decoration: none;
+            box-sizing: border-box;
         }
-        button:hover {
+        button:hover, a.toolbar-btn:hover {
             background-color: var(--accent);
             color: var(--bg);
             border-color: var(--accent);
         }
-        button:active { transform: translateY(1px); }
+        button:active, a.toolbar-btn:active { transform: translateY(1px); }
         button:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 
-        button.primary-btn {
+        button.primary-btn, a.toolbar-btn.primary-btn {
             background: var(--accent);
             color: var(--bg);
             border-color: var(--accent);
             font-weight: 600;
         }
-        button.primary-btn:hover { filter: brightness(1.15); }
+        button.primary-btn:hover, a.toolbar-btn.primary-btn:hover { filter: brightness(1.15); }
 
-        button.secondary {
+        button.secondary, a.toolbar-btn.secondary {
             background-color: transparent;
             color: var(--text-dim);
             border: 1px solid var(--border);
         }
-        button.secondary:hover {
+        button.secondary:hover, a.toolbar-btn.secondary:hover {
             color: var(--accent);
             border-color: var(--accent);
             background: rgba(79, 227, 210, 0.06);
@@ -515,6 +517,18 @@
             font-size: 0.75rem;
             color: var(--text-faint);
             font-family: var(--font-mono);
+        }
+        .empty-state-dev-link {
+            margin-top: 10px;
+            font-size: 0.75rem;
+        }
+        .empty-state-dev-link a {
+            color: var(--accent);
+            text-decoration: none;
+            font-family: var(--font-mono);
+        }
+        .empty-state-dev-link a:hover {
+            text-decoration: underline;
         }
 
         /* ==========================================================
@@ -877,6 +891,8 @@
             <option value="amber">🔶 Amber</option>
             <option value="matrix">💚 Matrix</option>
         </select>
+        <!-- Developer / About Me Link -->
+        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="toolbar-btn secondary hide-mobile" title="Developer & Portfolio — weaksideparadise.me">👨‍💻 About Me</a>
         <button class="secondary" onclick="openShortcutsModal()" title="Help & Shortcuts (?)">❓</button>
         <button class="danger" onclick="clearSavedState()" title="Reset all data">🗑️</button>
         <input type="file" id="fileInput" accept=".json">
@@ -898,6 +914,9 @@
             <button class="secondary" onclick="document.getElementById('fileInput').click()">📂 Load JSON</button>
         </div>
         <div class="empty-state-tip">Tip: Double-click any empty grid cell to create a task at that date.</div>
+        <div class="empty-state-dev-link">
+            Created by <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer">weaksideparadise.me ↗</a>
+        </div>
     </div>
 </div>
 
@@ -952,6 +971,13 @@
             <tr><td><kbd>Double Click</kbd> Link</td><td>Edit dependency link style/type</td></tr>
             <tr><td><kbd>?</kbd></td><td>Open this shortcuts guide</td></tr>
         </table>
+        
+        <!-- Developer Reference in Help Modal -->
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim);">
+            <span>Developer / More Projects:</span>
+            <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" style="color: var(--accent); font-family: var(--font-mono); font-weight: 600; text-decoration: none;">weaksideparadise.me ↗</a>
+        </div>
+
         <div class="modal-buttons">
             <button class="primary-btn" onclick="closeShortcutsModal()">Got it</button>
         </div>
