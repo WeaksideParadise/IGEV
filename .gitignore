@@ -1,0 +1,11 @@
+# Node modules & package manager
+node_modules/
+package-lock.json
+
+# Cloudflare Wrangler
+.wrangler/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,15 @@
+{
+  "name": "igev",
+  "version": "1.0.0",
+  "description": "IGEV - Intuitive Gantt Editor and Viewer",
+  "private": true,
+  "scripts": {
+    "build": "echo \"No build step required for static site\"",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler preview"
+  },
+  "devDependencies": {
+    "wrangler": "^4.86.0"
+  }
+}
