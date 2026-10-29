@@ -732,7 +732,7 @@
         .zoom-controls {
             position: fixed;
             right: max(14px, env(safe-area-inset-right));
-            bottom: calc(14px + env(safe-area-inset-bottom));
+            bottom: calc(44px + env(safe-area-inset-bottom));
             display: flex; flex-direction: column; align-items: center; gap: 6px;
             z-index: 100;
         }
@@ -847,6 +847,65 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* App Footer Bar (Legal & Compliance) */
+        .app-footer {
+            flex: 0 0 auto;
+            min-height: 28px;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            padding: 4px 14px;
+            padding-left: max(14px, env(safe-area-inset-left));
+            padding-right: max(14px, env(safe-area-inset-right));
+            padding-bottom: max(4px, env(safe-area-inset-bottom));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--text-faint);
+            z-index: 25;
+            box-sizing: border-box;
+            user-select: none;
+            font-family: var(--font-body);
+        }
+
+        .app-footer-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-footer-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-footer a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        .app-footer a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .app-footer .footer-sep {
+            color: var(--border-strong);
+            opacity: 0.7;
+        }
+
+        @media (max-width: 600px) {
+            .app-footer {
+                font-size: 0.68rem;
+                padding: 4px 8px;
+            }
+            .app-footer-left .hide-xs {
+                display: none;
+            }
+        }
+
         @media (max-width: 900px) { .hide-mobile { display: none !important; } }
         @media (max-width: 768px) {
             .controls { padding: 6px 10px; }
@@ -902,6 +961,19 @@
 
 <div id="gantt_here"></div>
 
+<footer class="app-footer">
+    <div class="app-footer-left">
+        <span>IGEV <span class="hide-xs">— Intuitive Gantt Editor &amp; Viewer</span></span>
+    </div>
+    <div class="app-footer-right">
+        <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer" title="Anbieterkennzeichnung gem. § 5 DDG">Impressum</a>
+        <span class="footer-sep">•</span>
+        <a href="datenschutz.html" title="Datenschutzerklärung gem. Art. 13 DSGVO">Datenschutz</a>
+        <span class="footer-sep">•</span>
+        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" title="WeaksideParadise Hub">weaksideparadise.me ↗</a>
+    </div>
+</footer>
+
 <!-- Empty State Overlay -->
 <div id="emptyStateOverlay" class="empty-state-overlay">
     <div class="empty-state-card">
@@ -916,6 +988,10 @@
         <div class="empty-state-tip">Tip: Double-click any empty grid cell to create a task at that date.</div>
         <div class="empty-state-dev-link">
             Created by <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer">weaksideparadise.me ↗</a>
+            <span style="margin: 0 6px; opacity: 0.4;">•</span>
+            <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer">Impressum</a>
+            <span style="margin: 0 6px; opacity: 0.4;">•</span>
+            <a href="datenschutz.html">Datenschutz</a>
         </div>
     </div>
 </div>
@@ -974,8 +1050,14 @@
         
         <!-- Developer Reference in Help Modal -->
         <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim);">
-            <span>Developer / More Projects:</span>
-            <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" style="color: var(--accent); font-family: var(--font-mono); font-weight: 600; text-decoration: none;">weaksideparadise.me ↗</a>
+            <span>Developer &amp; Legal:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer" style="color: var(--text-dim); text-decoration: none;">Impressum</a>
+                <span style="color: var(--border-strong);">•</span>
+                <a href="datenschutz.html" style="color: var(--text-dim); text-decoration: none;">Datenschutz</a>
+                <span style="color: var(--border-strong);">•</span>
+                <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" style="color: var(--accent); font-family: var(--font-mono); font-weight: 600; text-decoration: none;">weaksideparadise.me ↗</a>
+            </div>
         </div>
 
         <div class="modal-buttons">

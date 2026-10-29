@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="void">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datenschutzerklärung — IGEV (Intuitive Gantt Editor & Viewer)</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/500.css" rel="stylesheet">
+
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('igev_theme');
+          if (t) document.documentElement.setAttribute('data-theme', t);
+        } catch(e) {}
+      })();
+    </script>
+
+    <style>
+        :root, [data-theme="void"] {
+            --wp-void: #04070e;
+            --wp-abyss: #060b16;
+            --wp-panel: #0a1120;
+            --wp-raise: #0e1729;
+            --wp-line: #16233b;
+            --wp-line2: #23395c;
+            --wp-ink: #e9f3f9;
+            --wp-dim: #94a9c0;
+            --wp-faint: #5b7288;
+            --wp-cyan: #4fe3d2;
+            --wp-amber: #ffb648;
+            --wp-magenta: #ff5c86;
+            --wp-lime: #7bf0a4;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(79, 227, 210, 0.25);
+
+            --font-body: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+            --font-display: 'Chakra Petch', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+        }
+
+        [data-theme="light"] {
+            --wp-void: #ffffff;
+            --wp-abyss: #f9fafb;
+            --wp-panel: #f3f4f6;
+            --wp-raise: #e5e7eb;
+            --wp-line: #d1d5db;
+            --wp-line2: #9ca3af;
+            --wp-ink: #111827;
+            --wp-dim: #4b5563;
+            --wp-faint: #9ca3af;
+            --wp-cyan: #0284c7;
+            --wp-amber: #ea580c;
+            --wp-magenta: #e11d48;
+            --wp-lime: #16a34a;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="amber"] {
+            --wp-void: #0a0800;
+            --wp-abyss: #121000;
+            --wp-panel: #1a1400;
+            --wp-raise: #261d00;
+            --wp-line: #3d3000;
+            --wp-line2: #665000;
+            --wp-ink: #ffcc00;
+            --wp-dim: #cc9900;
+            --wp-faint: #806000;
+            --wp-cyan: #ffaa00;
+            --wp-amber: #ffdd00;
+            --wp-magenta: #ff6600;
+            --wp-lime: #ffee88;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(255, 170, 0, 0.35);
+
+            --font-body: 'JetBrains Mono', monospace;
+            --font-display: 'Chakra Petch', monospace;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        [data-theme="matrix"] {
+            --wp-void: #000a00;
+            --wp-abyss: #001200;
+            --wp-panel: #002200;
+            --wp-raise: #003300;
+            --wp-line: #004d00;
+            --wp-line2: #007700;
+            --wp-ink: #00ff41;
+            --wp-dim: #00cc33;
+            --wp-faint: #008020;
+            --wp-cyan: #00ff41;
+            --wp-amber: #88ff88;
+            --wp-magenta: #00bb22;
+            --wp-lime: #aaffaa;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 0 20px rgba(0, 255, 65, 0.4);
+
+            --font-body: 'JetBrains Mono', monospace;
+            --font-display: 'Chakra Petch', monospace;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top Header */
+        .legal-header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(8px);
+        }
+
+        .legal-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .legal-brand h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-app {
+            font-size: 0.65rem;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .legal-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-raised);
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+            padding: 6px 14px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        .btn-link:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* Main Container */
+        .legal-container {
+            flex: 1 0 auto;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 36px 20px 60px 20px;
+        }
+
+        .legal-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(79, 227, 210, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .legal-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            margin: 0 0 8px 0;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .legal-subtitle {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            margin: 0 0 28px 0;
+            font-family: var(--font-mono);
+        }
+
+        .highlight-box {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            border-left: 4px solid var(--accent);
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .highlight-box h3 {
+            margin: 0 0 8px 0;
+            font-family: var(--font-display);
+            color: var(--accent);
+            font-size: 1.05rem;
+        }
+
+        .highlight-box p {
+            margin: 0;
+            color: var(--text);
+            font-size: 0.92rem;
+        }
+
+        .legal-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+
+        .legal-section h2 {
+            font-family: var(--font-display);
+            color: var(--accent);
+            font-size: 1.25rem;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legal-section p {
+            color: var(--text);
+            font-size: 0.93rem;
+            margin: 0 0 12px 0;
+        }
+
+        .legal-section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .legal-section ul {
+            margin: 8px 0 14px 20px;
+            padding: 0;
+            color: var(--text);
+            font-size: 0.93rem;
+        }
+
+        .legal-section li {
+            margin-bottom: 6px;
+        }
+
+        .code-pill {
+            background: var(--bg-raised);
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            color: var(--accent);
+        }
+
+        .legal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            margin: 14px 0;
+        }
+
+        .legal-table th, .legal-table td {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .legal-table th {
+            background: var(--bg-raised);
+            color: var(--text);
+            font-family: var(--font-display);
+            font-weight: 600;
+        }
+
+        .legal-table td {
+            background: var(--bg-panel);
+            color: var(--text);
+        }
+
+        a.inline-link {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        a.inline-link:hover {
+            color: var(--text);
+        }
+
+        /* Footer */
+        .legal-footer {
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            padding: 18px 20px;
+            font-size: 0.82rem;
+            color: var(--text-faint);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .legal-footer a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        .legal-footer a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .legal-footer-links {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        @media (max-width: 680px) {
+            .legal-title { font-size: 1.5rem; }
+            .legal-section { padding: 16px; }
+            .legal-footer { flex-direction: column; align-items: flex-start; }
+            .legal-actions .btn-text-full { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="legal-header">
+    <a href="index.html" class="legal-brand" title="Zurück zu IGEV">
+        <h1>IGEV <span class="badge-app">Gantt</span></h1>
+    </a>
+    <div class="legal-actions">
+        <a href="index.html" class="btn-link">← <span class="btn-text-full">Zurück zur</span> App</a>
+        <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer" class="btn-link">Impressum ↗</a>
+    </div>
+</header>
+
+<main class="legal-container">
+    <div class="legal-badge-pill">🛡️ Datenschutz &amp; DSGVO-Transparenz</div>
+    <h1 class="legal-title">Datenschutzerklärung</h1>
+    <p class="legal-subtitle">Anwendungsspezifische Erklärung für IGEV — Intuitive Gantt Editor &amp; Viewer</p>
+
+    <!-- Key Principle Highlight -->
+    <div class="highlight-box">
+        <h3>🔒 Local-First-Architektur &amp; Vertraulichkeit</h3>
+        <p>
+            <strong>IGEV ist eine rein clientseitige Web-Anwendung („Local-First“).</strong> Ihre Projektzeitpläne, Aufgaben, Meilensteine und Diagramme werden ausschließlich lokal im flüchtigen Arbeitsspeicher Ihres Browsers verarbeitet bzw. in Ihrem lokalen Browser-Speicher gespeichert. Zu keinem Zeitpunkt werden Ihre Projektinhalte an unsere Webserver oder externe Dritte übertragen.
+        </p>
+    </div>
+
+    <!-- Section 1: Verantwortliche Stelle -->
+    <section class="legal-section">
+        <h2>1. Verantwortliche Stelle</h2>
+        <p>
+            Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO), des Digitale-Dienste-Gesetzes (DDG) sowie sonstiger datenschutzrechtlicher Bestimmungen für dieses Web-Telemedium ist der Betreiber des WeaksideParadise-Ökosystems.
+        </p>
+        <p>
+            Die vollständigen Angaben zur ladungsfähigen Anschrift, die Kontaktdaten (E-Mail, Telefon) sowie der Vertretungsberechtigte können jederzeit dem zentralen Impressum entnommen werden:
+        </p>
+        <p>
+            👉 <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer" class="inline-link"><strong>https://weaksideparadise.me/impressum.html</strong></a>
+        </p>
+    </section>
+
+    <!-- Section 2: Server-Logfiles & Hosting -->
+    <section class="legal-section">
+        <h2>2. Hosting &amp; Bereitstellung der Website (Server-Logfiles)</h2>
+        <p>
+            Beim Aufrufen dieser Web-App erfasst der Hosting-Dienstleister (Cloudflare Pages / GitHub Pages) automatisiert allgemeine technische Informationen, die Ihr Browser an den Server übermittelt. Diese Server-Logfiles beinhalten:
+        </p>
+        <ul>
+            <li>IP-Adresse des anfragenden Geräts (anonymisiert oder gekürzt verarbeitet)</li>
+            <li>Datum und Uhrzeit des Serverzugriffs (inkl. Zeitzone)</li>
+            <li>Name und URL der abgerufenen Ressource (Dateipfad)</li>
+            <li>HTTP-Statuscode (z. B. 200 OK, 404 Not Found)</li>
+            <li>Übertragene Datenmenge in Byte</li>
+            <li>Referrer URL (die zuvor besuchte Webseite, sofern vom Browser übertragen)</li>
+            <li>Browsertyp, Browserversion und Betriebssystem Ihres Endgeräts (User-Agent)</li>
+        </ul>
+        <p>
+            <strong>Rechtsgrundlage:</strong> Die Verarbeitung dieser Daten erfolgt auf Grundlage von <strong>Art. 6 Abs. 1 lit. f DSGVO</strong>. Unser berechtigtes Interesse besteht in der technisch fehlerfreien Bereitstellung, der Gewährleistung von Stabilität, Ausfallsicherheit und Lastverteilung sowie in der Abwehr und Aufklärung von Cyberangriffen und Missbrauch.
+        </p>
+        <p>
+            <strong>Speicherdauer:</strong> Server-Logfiles werden aus Sicherheitsgründen durch die Hosting-Infrastruktur für maximal 14 bis 30 Tage vorgehalten und anschließend automatisch gelöscht, es sei denn, eine längere Aufbewahrung ist zur Aufklärung konkreter Sicherheitsvorfälle gesetzlich erforderlich.
+        </p>
+    </section>
+
+    <!-- Section 3: LocalStorage & Cookie-Banner-Befreiung -->
+    <section class="legal-section">
+        <h2>3. Lokale Datenspeicherung (LocalStorage) &amp; Kein Cookie-Banner</h2>
+        <p>
+            Diese Anwendung verwendet <strong>keine HTTP-Cookies</strong> und keine Tracking-Pixel.
+        </p>
+        <p>
+            Damit Sie Ihre Projektpläne unterbrechungsfrei bearbeiten und Ihre persönlichen Ansichtseinstellungen beibehalten können, speichert IGEV Daten lokal im Speicher Ihres Webbrowsers (<code class="code-pill">window.localStorage</code>):
+        </p>
+        <table class="legal-table">
+            <thead>
+                <tr>
+                    <th>Schlüssel (Storage Key)</th>
+                    <th>Gespeicherte Inhalte &amp; Zweck</th>
+                    <th>Speicherort</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code class="code-pill">igev_theme</code></td>
+                    <td>Ausgewähltes Farbthema (z. B. <em>void</em>, <em>light</em>, <em>amber</em>, <em>matrix</em>) zur konsistenten visuellen Darstellung.</td>
+                    <td>Ausschließlich lokal im Webbrowser</td>
+                </tr>
+                <tr>
+                    <td><code class="code-pill">igev_gantt_state_v3</code></td>
+                    <td>Aktueller Arbeitsstand des Gantt-Diagramms (Aufgaben, Meilensteine, Abhängigkeiten/Links, Zoomstufe, Gittersichtbarkeit, Suchfilter, Scrollpositionen, Snap-Modus).</td>
+                    <td>Ausschließlich lokal im Webbrowser</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            <strong>Rechtsgrundlage:</strong> Die Speicherung dieser Informationen erfolgt auf Basis von <strong>§ 25 Abs. 2 Nr. 2 TDDDG</strong> (Telekommunikation-Digitale-Dienste-Datenschutz-Gesetz). Der Speicherzugriff ist technisch zwingend erforderlich, um Ihnen den von Ihnen ausdrücklich gewünschten Dienst (die lokale Erstellung, Speicherung und Wiederherstellung Ihres Gantt-Zeitplans) bereitzustellen.
+        </p>
+        <p>
+            <strong>Bestätigung — Kein Cookie-Banner erforderlich:</strong> Da die Anwendung keinerlei Tracking-Cookies, Werbe-Identifikatoren oder zustimmungspflichtige Drittanbieter-Analysen einsetzt, ist die Einbindung eines Cookie-Consent-Banners (z. B. nach TCF 2.2) nach deutschem und europäischem Recht nicht erforderlich.
+        </p>
+        <p>
+            <strong>Löschung der Daten:</strong> Alle im LocalStorage abgelegten Daten können Sie jederzeit selbstständig löschen:
+        </p>
+        <ul>
+            <li>Direkt in der App über die Schaltfläche mit dem <strong>Papierkorb-Symbol („Reset all data“)</strong> in der oberen Steuerungsleiste.</li>
+            <li>In den Einstellungen Ihres Browsers unter <em>„Datenschutz / Websitedaten löschen“</em> oder <em>„Browserdaten bereinigen“</em>.</li>
+        </ul>
+    </section>
+
+    <!-- Section 4: Dateiverarbeitung & Export/Import -->
+    <section class="legal-section">
+        <h2>4. Dateiverarbeitung (JSON-Import &amp; CSV-/JSON-Export)</h2>
+        <p>
+            IGEV bietet Ihnen die Möglichkeit, Gantt-Projekte als JSON-Dateien zu importieren oder als JSON- bzw. CSV-Dateien zu exportieren:
+        </p>
+        <ul>
+            <li><strong>Import:</strong> Wenn Sie eine Projektdatei auswählen (<code class="code-pill">📂 Import</code>), wird diese über die HTML5 <code class="code-pill">FileReader</code> API ausschließlich lokal im Arbeitsspeicher Ihres Browsers eingelesen und visualisiert. Es findet <em>keine</em> Dateiübertragung an unsere Server statt.</li>
+            <li><strong>Export:</strong> Wenn Sie einen Export (<code class="code-pill">💾 Export</code> oder <code class="code-pill">📊 CSV</code>) anstoßen, wird die Ausgabedatei clientseitig mittels eines lokalen Speicherobjekts (<code class="code-pill">Blob</code> / <code class="code-pill">URL.createObjectURL</code>) direkt in Ihrem Browser generiert und zum Download angeboten.</li>
+        </ul>
+        <p>
+            Ihre vertraulichen Planungs- und Projektdaten verlassen zu keinem Zeitpunkt Ihr lokales Endgerät.
+        </p>
+    </section>
+
+    <!-- Section 5: Externe CDNs & Schriftarten -->
+    <section class="legal-section">
+        <h2>5. Einbindung externer Bibliotheken &amp; Schriftarten</h2>
+        <p>
+            Zur Bereitstellung einer performanten, stabilen und typografisch sauberen Benutzeroberfläche nutzt diese Anwendung externe Content Delivery Networks (CDNs):
+        </p>
+        <ul>
+            <li>
+                <strong>DHTMLX Gantt (jsDelivr CDN):</strong> Zur Darstellung und interaktiven Berechnung der Gantt-Diagramme wird die JavaScript-Bibliothek DHTMLX Gantt (Version 8.0.6) über das CDN <code class="code-pill">cdn.jsdelivr.net</code> (betrieben von ProspectOne Sp. z o.o., Polen) eingebunden.
+            </li>
+            <li>
+                <strong>Web-Schriftarten (Google Fonts &amp; @fontsource):</strong> Zur typografischen Gestaltung werden Schriftarten (u. a. <em>Chakra Petch</em>, <em>JetBrains Mono</em>, <em>Space Grotesk</em>) über Google Fonts (<code class="code-pill">fonts.googleapis.com</code> / <code class="code-pill">fonts.gstatic.com</code>, Google Ireland Limited) bzw. Roboto via jsDelivr geladen.
+            </li>
+        </ul>
+        <p>
+            Beim Abrufen dieser Stylesheets, Skripte und Schriftdateien stellt Ihr Browser eine Verbindung zu den Servern der jeweiligen Anbieter her. Hierbei wird technisch unvermeidlich Ihre IP-Adresse übertragen, um die angeforderten Dateien an Ihren Browser auszuliefern.
+        </p>
+        <p>
+            <strong>Rechtsgrundlage:</strong> Die Einbindung erfolgt auf Grundlage von <strong>Art. 6 Abs. 1 lit. f DSGVO</strong> (berechtigtes Interesse an einer einheitlichen, performanten und barrierearmen Darstellung unseres Online-Angebots ohne unverhältnismäßigen Server-Overhead).
+        </p>
+    </section>
+
+    <!-- Section 6: Keine Tracker oder Werbenetzwerke -->
+    <section class="legal-section">
+        <h2>6. Keine Webanalyse, Tracker oder Werbenetzwerke</h2>
+        <p>
+            Diese Anwendung verzichtet vollständig auf:
+        </p>
+        <ul>
+            <li>Webanalyse-Dienste (wie Google Analytics, Matomo, Plausible oder Hotjar)</li>
+            <li>Werbenetzwerke und Monetarisierungs-Dienste (wie Google AdSense)</li>
+            <li>Social-Media-Plugins und Tracking-Pixel (wie Meta Pixel, TikTok SDK)</li>
+            <li>Automatisierte Profilbildung (Profiling) oder Verhaltensbeobachtung</li>
+        </ul>
+    </section>
+
+    <!-- Section 7: SSL/TLS-Verschlüsselung -->
+    <section class="legal-section">
+        <h2>7. SSL-/TLS-Verschlüsselung</h2>
+        <p>
+            Diese Seite nutzt aus Sicherheitsgründen und zum Schutz der Übertragung aller Daten eine SSL- bzw. TLS-Verschlüsselung (HTTPS) gemäß <strong>Art. 32 DSGVO und § 19 TDDDG</strong>. Eine verschlüsselte Verbindung erkennen Sie daran, dass die Adresszeile des Browsers von <code class="code-pill">http://</code> auf <code class="code-pill">https://</code> wechselt und an dem Schloss-Symbol in Ihrer Browserzeile.
+        </p>
+    </section>
+
+    <!-- Section 8: Betroffenenrechte -->
+    <section class="legal-section">
+        <h2>8. Ihre Rechte als betroffene Person (Art. 15–21 DSGVO)</h2>
+        <p>
+            Nach der Datenschutz-Grundverordnung stehen Ihnen als betroffene Person folgende gesetzliche Rechte zu:
+        </p>
+        <ul>
+            <li><strong>Recht auf Auskunft (Art. 15 DSGVO):</strong> Sie haben das Recht, eine Bestätigung darüber zu verlangen, ob personenbezogene Daten verarbeitet werden, und Auskunft über diese Daten zu erhalten.</li>
+            <li><strong>Recht auf Berichtigung (Art. 16 DSGVO):</strong> Sie haben das Recht auf Berichtigung unrichtiger oder Vervollständigung unvollständiger personenbezogener Daten.</li>
+            <li><strong>Recht auf Löschung (Art. 17 DSGVO):</strong> Sie haben das Recht, die unverzügliche Löschung Ihrer personenbezogenen Daten zu verlangen („Recht auf Vergessenwerden“).</li>
+            <li><strong>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO):</strong> Unter den gesetzlichen Voraussetzungen können Sie die Einschränkung der Datenverarbeitung verlangen.</li>
+            <li><strong>Recht auf Datenübertragbarkeit (Art. 20 DSGVO):</strong> Sie haben das Recht, Daten, die Sie uns bereitgestellt haben, in einem strukturierten, gängigen und maschinenlesbaren Format zu erhalten oder an einen anderen Verantwortlichen übertragen zu lassen.</li>
+            <li><strong>Widerspruchsrecht (Art. 21 DSGVO):</strong> Sie können jederzeit gegen die Verarbeitung Ihrer personenbezogenen Daten, die auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO erfolgt, aus Gründen, die sich aus Ihrer besonderen Situation ergeben, Widerspruch einlegen.</li>
+            <li><strong>Beschwerderecht bei einer Aufsichtsbehörde (Art. 77 DSGVO):</strong> Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten zu beschweren (z. B. bei der für Ihren Wohnort oder unseren Sitz zuständigen Landesbeauftragten für den Datenschutz).</li>
+        </ul>
+        <p>
+            <em>Praktischer Hinweis zur Datenlöschung:</em> Da IGEV keine personenbezogenen Benutzerdaten oder Projektdaten auf externen Servern speichert, können Sie Ihr Recht auf Datenlöschung und -berichtigung bezüglich Ihrer erstellten Projektzeitpläne direkt und unmittelbar selbst ausüben, indem Sie den Cache bzw. den <code class="code-pill">localStorage</code> Ihres Browsers leeren oder über die Schaltfläche „Reset all data“ zurücksetzen.
+        </p>
+    </section>
+
+    <!-- Section 9: Stand und Aktualität -->
+    <section class="legal-section">
+        <h2>9. Stand und Aktualität dieser Datenschutzerklärung</h2>
+        <p>
+            Diese Datenschutzerklärung ist aktuell gültig und hat den Stand: <strong>Oktober 2026</strong>.
+        </p>
+        <p>
+            Durch die Weiterentwicklung unserer Web-App oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann es notwendig werden, diese Datenschutzerklärung anzupassen. Die jeweils aktuelle Fassung kann jederzeit auf dieser Seite abgerufen werden.
+        </p>
+    </section>
+</main>
+
+<footer class="legal-footer">
+    <div class="legal-footer-copy">
+        <span>&copy; 2026 IGEV &bull; WeaksideParadise Fleet</span>
+    </div>
+    <div class="legal-footer-links">
+        <a href="index.html">← Zur IGEV App</a>
+        <span>&bull;</span>
+        <a href="https://weaksideparadise.me/impressum.html" target="_blank" rel="noopener noreferrer">Impressum ↗</a>
+        <span>&bull;</span>
+        <a href="datenschutz.html" aria-current="page">Datenschutz</a>
+        <span>&bull;</span>
+        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer">weaksideparadise.me ↗</a>
+    </div>
+</footer>
+
+</body>
+</html>
