@@ -657,13 +657,13 @@
         .gantt_add:hover::before, .gantt_grid_head_add:hover::before { color: var(--accent); }
 
         /* ==========================================================
-           GRID RESIZER (HORIZONTAL RESIZING FOR LEFT PANEL)
+           GRID RESIZER (HORIZONTAL RESIZING FOR LEFT PANEL - MOBILE & PC)
            ========================================================== */
         .gantt_resizer {
             cursor: col-resize !important;
             background: var(--border) !important;
-            width: 5px !important;
-            min-width: 5px !important;
+            width: 4px !important;
+            min-width: 4px !important;
             position: relative;
             z-index: 9 !important;
             transition: background 0.15s ease, box-shadow 0.15s ease;
@@ -680,6 +680,72 @@
         .gantt_drag_marker.gantt_grid_resize_area {
             background-color: rgba(79, 227, 210, 0.15) !important;
             border-right: 2px dashed var(--accent) !important;
+        }
+
+        /* Dedicated Touch & Mouse Splitter Handle */
+        .custom-grid-splitter {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 20px;
+            margin-left: -10px;
+            cursor: col-resize;
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .custom-grid-splitter::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 9px;
+            width: 2px;
+            background: var(--border-strong);
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+        .custom-grid-splitter:hover::before,
+        .custom-grid-splitter.dragging::before {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .custom-grid-splitter .splitter-handle {
+            position: relative;
+            z-index: 2;
+            width: 22px;
+            height: 44px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            opacity: 0.9;
+            transition: opacity 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .custom-grid-splitter:hover .splitter-handle,
+        .custom-grid-splitter.dragging .splitter-handle {
+            opacity: 1;
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+            transform: scale(1.05);
+        }
+        .custom-grid-splitter .splitter-handle span {
+            width: 2px;
+            height: 16px;
+            background: var(--text-dim);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+        .custom-grid-splitter:hover .splitter-handle span,
+        .custom-grid-splitter.dragging .splitter-handle span {
+            background: var(--accent);
         }
 
         /* Inline List Toggle & Docked Expand Tab */
@@ -1223,8 +1289,9 @@
     })();
 
     // ===================================================================
-    // HISTORY (UNDO / REDO)
+    // HISTORY (UNDO / REDO) & GLOBAL STATE
     // ===================================================================
+    let isLocked = false;
     const historyStack = [];
     let historyPointer = -1;
     const MAX_HISTORY = 30;
@@ -1746,6 +1813,8 @@
         updateZoomLabel();
         updateGridToggleBtn();
         applyLockState();
+        updateEmptyState();
+        initGridSplitter();
     }
     initManualZoom();
 
@@ -1915,7 +1984,6 @@
     // ===================================================================
     // READ-ONLY LOCK MODE LOGIC
     // ===================================================================
-    let isLocked = false;
     function toggleLock(forceState) {
         isLocked = (forceState === undefined) ? !isLocked : !!forceState;
         applyLockState();
@@ -1984,6 +2052,117 @@
         quickAddTaskAt(cursorDate);
     }
 
+    // ===================================================================
+    // INTERACTIVE HORIZONTAL RESIZER FOR LEFT PANEL (TOUCH & MOUSE)
+    // ===================================================================
+    function initGridSplitter() {
+        const container = document.getElementById("gantt_here");
+        if (!container) return;
+        let splitter = document.getElementById("customGridSplitter");
+        if (!splitter) {
+            splitter = document.createElement("div");
+            splitter.id = "customGridSplitter";
+            splitter.className = "custom-grid-splitter";
+            splitter.setAttribute("title", "Drag to resize panel (Touch & Mouse)");
+            splitter.innerHTML = '<div class="splitter-handle"><span></span><span></span></div>';
+            container.appendChild(splitter);
+        }
+
+        function updateSplitterPosition() {
+            if (!gantt.config.show_grid) {
+                splitter.style.display = "none";
+                return;
+            }
+            const grid = document.querySelector(".gantt_grid");
+            if (!grid) {
+                splitter.style.display = "none";
+                return;
+            }
+            splitter.style.display = "flex";
+            const width = grid.offsetWidth;
+            splitter.style.left = width + "px";
+        }
+
+        let isDragging = false;
+        let startX = 0;
+        let startWidth = 0;
+        let rafId = null;
+        let pendingX = 0;
+
+        function onPointerDown(e) {
+            if (!gantt.config.show_grid) return;
+            isDragging = true;
+            splitter.classList.add("dragging");
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            startX = clientX;
+            const grid = document.querySelector(".gantt_grid");
+            startWidth = grid ? grid.offsetWidth : (gantt.config.grid_width || 250);
+
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+
+            window.addEventListener("pointermove", onPointerMove, { passive: false });
+            window.addEventListener("pointerup", onPointerUp);
+            window.addEventListener("touchmove", onPointerMove, { passive: false });
+            window.addEventListener("touchend", onPointerUp);
+            window.addEventListener("mousemove", onPointerMove);
+            window.addEventListener("mouseup", onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            pendingX = e.touches ? e.touches[0].clientX : e.clientX;
+            if (!rafId) {
+                rafId = requestAnimationFrame(() => {
+                    rafId = null;
+                    const deltaX = pendingX - startX;
+                    const minW = isSmallScreen ? 60 : 120;
+                    const maxW = Math.max(minW + 50, window.innerWidth - (isSmallScreen ? 50 : 120));
+                    const newWidth = Math.max(minW, Math.min(maxW, Math.round(startWidth + deltaX)));
+
+                    gantt.config.grid_width = newWidth;
+                    gantt.render();
+                    updateSplitterPosition();
+                });
+            }
+            if (e.cancelable) e.preventDefault();
+        }
+
+        function onPointerUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            splitter.classList.remove("dragging");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+            window.removeEventListener("touchmove", onPointerMove);
+            window.removeEventListener("touchend", onPointerUp);
+            window.removeEventListener("mousemove", onPointerMove);
+            window.removeEventListener("mouseup", onPointerUp);
+
+            gantt.render();
+            updateSplitterPosition();
+            scheduleSave();
+        }
+
+        splitter.addEventListener("pointerdown", onPointerDown);
+        splitter.addEventListener("touchstart", onPointerDown, { passive: false });
+        splitter.addEventListener("mousedown", onPointerDown);
+
+        gantt.attachEvent("onGanttRender", updateSplitterPosition);
+        window.addEventListener("resize", updateSplitterPosition);
+        updateSplitterPosition();
+    }
+
     function toggleGrid(e, forceState) {
         if (e && typeof e.stopPropagation === 'function') {
             e.stopPropagation();
@@ -2005,6 +2184,10 @@
         const expandBtn = document.getElementById('gridExpandBtn');
         if (expandBtn) {
             expandBtn.style.display = gantt.config.show_grid ? 'none' : 'inline-flex';
+        }
+        const splitter = document.getElementById("customGridSplitter");
+        if (splitter) {
+            splitter.style.display = gantt.config.show_grid ? "flex" : "none";
         }
     }
     updateGridToggleBtn();
@@ -2406,12 +2589,12 @@
             }
             return;
         }
-        if (e.key === '+' || e.key === '=') {
+        if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' || e.code === 'Equal' || e.key === 'Add') {
             e.preventDefault();
             zoomStepFromUI(1);
             return;
         }
-        if (e.key === '-' || e.key === '_') {
+        if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' || e.code === 'Minus' || e.key === 'Subtract') {
             e.preventDefault();
             zoomStepFromUI(-1);
             return;
@@ -2429,10 +2612,9 @@
     let lastZoomTime = 0;
 
     container.addEventListener('wheel', function(event) {
-        const isTimeline = event.target.closest(".gantt_task");
-        const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale");
+        const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale") || event.target.closest("#customGridSplitter");
 
-        if (isTimeline && !isGrid) {
+        if (!isGrid) {
             if (event.shiftKey) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -2598,6 +2780,7 @@
         initTimelineDateRange(new Date());
         gantt.render();
         updateTodayMarker();
+        updateEmptyState(); // Show immediately on initial load
 
         fetch('gantt_data.json')
             .then(r => r.ok ? r.json() : null)
