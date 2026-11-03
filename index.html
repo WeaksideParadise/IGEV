@@ -478,11 +478,13 @@
             align-items: center;
             justify-content: center;
             pointer-events: none;
-            z-index: 4;
+            z-index: 60 !important;
         }
         .empty-state-overlay.visible { display: flex; }
         .empty-state-card {
             pointer-events: auto;
+            position: relative;
+            z-index: 61;
             background: var(--bg-panel);
             border: 1px solid var(--border-strong);
             box-shadow: var(--shadow-glow), 0 16px 36px rgba(0,0,0,0.4);
@@ -534,7 +536,11 @@
         /* ==========================================================
            DHTMLX OVERRIDES
            ========================================================== */
-        .gantt_grid { background: var(--bg-surface) !important; }
+        .gantt_grid {
+            background: var(--bg-surface) !important;
+            position: relative;
+            z-index: 6 !important;
+        }
         .gantt_grid_scale {
             background: var(--bg-raised) !important;
             border-bottom: 1px solid var(--border) !important;
@@ -649,6 +655,108 @@
             pointer-events: none;
         }
         .gantt_add:hover::before, .gantt_grid_head_add:hover::before { color: var(--accent); }
+
+        /* ==========================================================
+           GRID RESIZER (HORIZONTAL RESIZING FOR LEFT PANEL)
+           ========================================================== */
+        .gantt_resizer {
+            cursor: col-resize !important;
+            background: var(--border) !important;
+            width: 5px !important;
+            min-width: 5px !important;
+            position: relative;
+            z-index: 9 !important;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
+        }
+        .gantt_resizer:hover, .gantt_resizer:active {
+            background: var(--accent) !important;
+            box-shadow: 0 0 10px var(--accent);
+        }
+        .gantt_resizer_stick {
+            background: var(--accent) !important;
+            box-shadow: 0 0 12px var(--accent);
+            z-index: 9999 !important;
+        }
+        .gantt_drag_marker.gantt_grid_resize_area {
+            background-color: rgba(79, 227, 210, 0.15) !important;
+            border-right: 2px dashed var(--accent) !important;
+        }
+
+        /* Inline List Toggle & Docked Expand Tab */
+        .grid-header-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            vertical-align: middle;
+        }
+        .grid-toggle-inline-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.68rem;
+            line-height: 1;
+            transition: all 0.15s ease;
+        }
+        .grid-toggle-inline-btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+        .grid-expand-tab {
+            position: fixed;
+            left: 0;
+            top: 56px;
+            z-index: 15;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+            color: var(--accent);
+            font-family: var(--font-display);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 2px 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.2s ease;
+        }
+        .grid-expand-tab:hover {
+            background: var(--accent);
+            color: var(--bg);
+            transform: translateX(2px);
+        }
+
+        /* Read-Only Lock State */
+        body.is-locked .gantt_add,
+        body.is-locked .gantt_grid_head_add,
+        body.is-locked .gantt_link_control {
+            display: none !important;
+        }
+        body.is-locked .gantt_task_content {
+            cursor: default !important;
+        }
+        body.is-locked .gantt_task_drag {
+            display: none !important;
+        }
+        .btn-locked {
+            background: rgba(255, 92, 134, 0.18) !important;
+            border-color: var(--accent-3) !important;
+            color: var(--accent-3) !important;
+        }
+        .btn-locked:hover {
+            background: rgba(255, 92, 134, 0.3) !important;
+        }
 
         /* Lightbox */
         .gantt_cal_light, .gantt_cal_light_wide {
@@ -939,7 +1047,7 @@
         <button id="redoBtn" class="secondary" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
         <button class="primary-btn" onclick="quickAddTask()" title="Add Task at Current View">➕ Task</button>
         <button class="secondary" onclick="showToday()" title="Jump to Today (Space)">📅 Today</button>
-        <button class="secondary" id="gridToggleBtn" onclick="toggleGrid()" title="Toggle List/Timeline Panel">📋 List</button>
+        <button class="secondary" id="lockToggleBtn" onclick="toggleLock()" title="Lock diagram to read-only mode (L)">🔓 Edit</button>
         <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap dates to scale boundaries">🧲 Snap: Off</button>
         <button class="secondary" onclick="document.getElementById('fileInput').click()" title="Load Gantt JSON">📂 Import</button>
         <button class="secondary" onclick="saveData()" title="Download JSON file">💾 Export</button>
@@ -960,6 +1068,10 @@
 </div>
 
 <div id="gantt_here"></div>
+<button id="gridExpandBtn" class="grid-expand-tab" onclick="toggleGrid(event)" title="Show Task List (▶)">
+    <span class="tab-arrow">▶</span>
+    <span class="tab-label">List</span>
+</button>
 
 <footer class="app-footer">
     <div class="app-footer-left">
@@ -1037,6 +1149,7 @@
         <table class="shortcuts-table">
             <tr><td><kbd>Mouse Drag</kbd></td><td>Pan diagram continuously in all directions</td></tr>
             <tr><td><kbd>Space</kbd></td><td>Jump viewport to Today</td></tr>
+            <tr><td><kbd>L</kbd></td><td>Toggle Read-Only Lock</td></tr>
             <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Cmd</kbd> + <kbd>Z</kbd></td><td>Undo last action</td></tr>
             <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Cmd</kbd> + <kbd>Y</kbd></td><td>Redo last action</td></tr>
             <tr><td><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Quick search filter</td></tr>
@@ -1130,6 +1243,7 @@
     }
 
     function undo() {
+        if (isLocked) return;
         if (historyPointer > 0) {
             isHistoryOperating = true;
             historyPointer--;
@@ -1147,6 +1261,7 @@
     }
 
     function redo() {
+        if (isLocked) return;
         if (historyPointer < historyStack.length - 1) {
             isHistoryOperating = true;
             historyPointer++;
@@ -1166,8 +1281,8 @@
     function updateUndoRedoUI() {
         const uBtn = document.getElementById('undoBtn');
         const rBtn = document.getElementById('redoBtn');
-        if (uBtn) uBtn.disabled = (historyPointer <= 0);
-        if (rBtn) rBtn.disabled = (historyPointer >= historyStack.length - 1);
+        if (uBtn) uBtn.disabled = isLocked || (historyPointer <= 0);
+        if (rBtn) rBtn.disabled = isLocked || (historyPointer >= historyStack.length - 1);
     }
 
     document.getElementById('undoBtn').addEventListener('click', undo);
@@ -1197,6 +1312,9 @@
                 zoomIndex: currentZoomIndex,
                 activeRowHeight: activeRowHeight,
                 showGrid: gantt.config.show_grid,
+                gridWidth: gantt.config.grid_width,
+                isLocked: isLocked,
+                zoomLevelName: (zoomLevels[currentZoomIndex] ? zoomLevels[currentZoomIndex].name : null),
                 searchText: currentSearch,
                 scrollX: scrollState.x || 0,
                 scrollY: scrollState.y || 0,
@@ -1226,6 +1344,10 @@
     }
 
     function clearSavedState() {
+        if (isLocked) {
+            alert('Diagram is locked in read-only mode. Please unlock it first.');
+            return;
+        }
         if (confirm('Clear entire diagram and reset workspace?')) {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('igev_theme');
@@ -1295,13 +1417,23 @@
     gantt.config.touch = true;
     gantt.config.touch_drag = true;
     gantt.config.touch_feedback = true;
+    gantt.config.grid_resize = true;
+    gantt.config.keep_grid_width = false;
+    gantt.config.min_grid_column_width = 30;
 
     const ganttColumns = [
-        { name: "text", label: "Task Name", tree: true, width: isSmallScreen ? 150 : 230, min_width: 120, resize: true },
+        {
+            name: "text",
+            label: '<div class="grid-header-label"><button type="button" class="grid-toggle-inline-btn" onclick="toggleGrid(event)" title="Collapse task list (◀)">◀</button><span>Task Name</span></div>',
+            tree: true,
+            width: isSmallScreen ? 150 : 230,
+            min_width: 120,
+            resize: true
+        },
         { name: "start_date", label: "Start", align: "center", width: isSmallScreen ? 70 : 85, resize: true }
     ];
     if (!isSmallScreen) {
-        ganttColumns.push({ name: "duration", label: "Days", align: "center", width: 45 });
+        ganttColumns.push({ name: "duration", label: "Days", align: "center", width: 45, resize: true });
     }
     ganttColumns.push({ name: "add", width: 40 });
     gantt.config.columns = ganttColumns;
@@ -1349,17 +1481,142 @@
     gantt.config.autoscroll_speed = 25;
 
     // ===================================================================
-    // ZOOM TIERS & TIMELINE SPAN BUFFER
+    // ZOOM TIERS & TIMELINE SPAN BUFFER (MINUTE TO DECADE LEVEL)
     // ===================================================================
     const zoomLevels = [
-        { name: "year", scale_height: 50, row_height: 28, min_column_width: 32, scales: [{unit: "year", step: 1, format: "%Y"}]},
-        { name: "quarter", scale_height: 50, row_height: 32, min_column_width: 85, scales: [{unit: "year", step: 1, format: "%Y"}, {unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1)}]},
-        { name: "month", scale_height: 50, row_height: 35, min_column_width: 110, scales: [{unit: "month", format: "%F, %Y"}, {unit: "week", format: "W%W"}]},
-        { name: "week", scale_height: 50, row_height: 42, min_column_width: 48, scales: [{unit: "month", format: "%M %Y"}, {unit: "day", step: 1, format: "%d %D"}]},
-        { name: "day", scale_height: 50, row_height: 52, min_column_width: 75, scales: [{unit: "month", format: "%M %Y"}, {unit: "day", step: 1, format: "%d %M"}]}
+        {
+            name: "decade",
+            scale_height: 50,
+            row_height: 28,
+            min_column_width: 50,
+            scales: [
+                { unit: "year", step: 10, format: (d) => { const y = Math.floor(d.getFullYear() / 10) * 10; return y + "s"; } },
+                { unit: "year", step: 2, format: "%Y" }
+            ],
+            time_step: 60,
+            pad: { unit: "year", before: 40, after: 60 },
+            expandStep: { unit: "year", amount: 20 }
+        },
+        {
+            name: "multi-year",
+            scale_height: 50,
+            row_height: 28,
+            min_column_width: 45,
+            scales: [
+                { unit: "year", step: 5, format: (d) => { const y = Math.floor(d.getFullYear() / 5) * 5; return y + " – " + (y + 4); } },
+                { unit: "year", step: 1, format: "%Y" }
+            ],
+            time_step: 60,
+            pad: { unit: "year", before: 20, after: 30 },
+            expandStep: { unit: "year", amount: 10 }
+        },
+        {
+            name: "year",
+            scale_height: 50,
+            row_height: 28,
+            min_column_width: 35,
+            scales: [
+                { unit: "year", step: 1, format: "%Y" },
+                { unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1) }
+            ],
+            time_step: 60,
+            pad: { unit: "year", before: 8, after: 12 },
+            expandStep: { unit: "year", amount: 4 }
+        },
+        {
+            name: "quarter",
+            scale_height: 50,
+            row_height: 32,
+            min_column_width: 85,
+            scales: [
+                { unit: "year", step: 1, format: "%Y" },
+                { unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1) }
+            ],
+            time_step: 60,
+            pad: { unit: "year", before: 3, after: 4 },
+            expandStep: { unit: "month", amount: 18 }
+        },
+        {
+            name: "month",
+            scale_height: 50,
+            row_height: 35,
+            min_column_width: 110,
+            scales: [
+                { unit: "month", format: "%F, %Y" },
+                { unit: "week", format: "W%W" }
+            ],
+            time_step: 60,
+            pad: { unit: "month", before: 12, after: 18 },
+            expandStep: { unit: "month", amount: 6 }
+        },
+        {
+            name: "week",
+            scale_height: 50,
+            row_height: 42,
+            min_column_width: 48,
+            scales: [
+                { unit: "month", format: "%M %Y" },
+                { unit: "day", step: 1, format: "%d %D" }
+            ],
+            time_step: 60,
+            pad: { unit: "day", before: 40, after: 80 },
+            expandStep: { unit: "day", amount: 25 }
+        },
+        {
+            name: "day",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 75,
+            scales: [
+                { unit: "month", format: "%M %Y" },
+                { unit: "day", step: 1, format: "%d %M" }
+            ],
+            time_step: 60,
+            pad: { unit: "day", before: 20, after: 40 },
+            expandStep: { unit: "day", amount: 15 }
+        },
+        {
+            name: "hour",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 42,
+            scales: [
+                { unit: "day", format: "%D, %d %M %Y" },
+                { unit: "hour", step: 1, format: "%H:00" }
+            ],
+            time_step: 15,
+            pad: { unit: "day", before: 4, after: 8 },
+            expandStep: { unit: "day", amount: 3 }
+        },
+        {
+            name: "15-min",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 45,
+            scales: [
+                { unit: "day", format: "%D, %d %M %Y" },
+                { unit: "minute", step: 15, format: "%H:%i" }
+            ],
+            time_step: 5,
+            pad: { unit: "day", before: 2, after: 3 },
+            expandStep: { unit: "hour", amount: 12 }
+        },
+        {
+            name: "minute",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 44,
+            scales: [
+                { unit: "hour", format: "%H:00 — %d %M %Y" },
+                { unit: "minute", step: 1, format: "%H:%i" }
+            ],
+            time_step: 1,
+            pad: { unit: "hour", before: 12, after: 18 },
+            expandStep: { unit: "hour", amount: 4 }
+        }
     ];
 
-    let currentZoomIndex = 2;
+    let currentZoomIndex = 4; // default "month"
     let activeRowHeight = zoomLevels[currentZoomIndex].row_height;
 
     function updateZoomLabel() {
@@ -1383,7 +1640,7 @@
         return { minDate, maxDate };
     }
 
-    // CRITICAL: Guarantees the timeline is thousands of pixels wider than viewport for instant mouse panning
+    // Guarantees the timeline is wide enough for instant mouse panning at current zoom scale
     function initTimelineDateRange(refDate) {
         const projRange = getProjectDateRange();
         const anchor = refDate || new Date();
@@ -1391,14 +1648,8 @@
         let refMin = projRange.minDate ? new Date(Math.min(anchor.getTime(), projRange.minDate.getTime())) : anchor;
         let refMax = projRange.maxDate ? new Date(Math.max(anchor.getTime(), projRange.maxDate.getTime())) : anchor;
 
-        const paddingByZoom = [
-            { unit: "year", before: 8, after: 12 },
-            { unit: "year", before: 3, after: 4 },
-            { unit: "month", before: 12, after: 18 },
-            { unit: "day", before: 40, after: 80 },
-            { unit: "day", before: 20, after: 40 }
-        ];
-        const pad = paddingByZoom[currentZoomIndex] || { unit: "month", before: 12, after: 18 };
+        const currentLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
+        const pad = currentLvl.pad || { unit: "month", before: 12, after: 18 };
 
         gantt.config.start_date = gantt.date.add(refMin, -pad.before, pad.unit);
         gantt.config.end_date = gantt.date.add(refMax, pad.after, pad.unit);
@@ -1425,6 +1676,8 @@
 
         gantt.config.scales = nextLevel.scales;
         gantt.config.min_column_width = nextLevel.min_column_width;
+        gantt.config.scale_height = nextLevel.scale_height;
+        gantt.config.time_step = nextLevel.time_step || 60;
 
         if (anchorInHeader) {
             gantt.config.row_height = activeRowHeight;
@@ -1481,6 +1734,7 @@
         gantt.config.scales = level.scales;
         gantt.config.min_column_width = level.min_column_width;
         gantt.config.scale_height = level.scale_height;
+        gantt.config.time_step = level.time_step || 60;
         gantt.config.row_height = activeRowHeight;
         document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
         
@@ -1490,6 +1744,8 @@
         gantt.init("gantt_here");
         updateTodayMarker();
         updateZoomLabel();
+        updateGridToggleBtn();
+        applyLockState();
     }
     initManualZoom();
 
@@ -1547,7 +1803,7 @@
                 const scrollX = gantt.getScrollState().x;
                 const clickX = e.clientX - rect.left + scrollX;
                 const date = gantt.dateFromPos(clickX) || new Date();
-                quickAddTaskAt(date);
+                if (!isLocked) quickAddTaskAt(date);
             });
             fragT.appendChild(tRow);
 
@@ -1561,7 +1817,7 @@
                 gRow.style.left = '0';
                 gRow.style.width = '100%';
                 gRow.addEventListener('dblclick', function() {
-                    quickAddTaskAt(new Date());
+                    if (!isLocked) quickAddTaskAt(new Date());
                 });
                 fragG.appendChild(gRow);
             }
@@ -1656,7 +1912,53 @@
         scheduleSave();
     }
 
+    // ===================================================================
+    // READ-ONLY LOCK MODE LOGIC
+    // ===================================================================
+    let isLocked = false;
+    function toggleLock(forceState) {
+        isLocked = (forceState === undefined) ? !isLocked : !!forceState;
+        applyLockState();
+        showToast(isLocked ? "🔒 Diagram is locked (read-only)" : "🔓 Edit mode unlocked");
+        scheduleSave();
+    }
+
+    function applyLockState() {
+        gantt.config.readonly = isLocked;
+        gantt.config.drag_move = !isLocked;
+        gantt.config.drag_resize = !isLocked;
+        gantt.config.drag_progress = !isLocked;
+        gantt.config.drag_links = !isLocked;
+        gantt.config.details_on_dblclick = !isLocked;
+        gantt.config.details_on_create = !isLocked;
+        gantt.config.order_branch = !isLocked;
+        gantt.config.order_branch_free = !isLocked;
+
+        document.body.classList.toggle('is-locked', isLocked);
+
+        const btn = document.getElementById('lockToggleBtn');
+        if (btn) {
+            btn.innerHTML = isLocked ? "🔒 Locked" : "🔓 Edit";
+            btn.classList.toggle('btn-locked', isLocked);
+            btn.title = isLocked ? "Diagram is locked (read-only). Click or press 'L' to unlock" : "Lock diagram to read-only mode (L)";
+        }
+
+        const addBtn = document.querySelector('.primary-btn[onclick="quickAddTask()"]');
+        if (addBtn) {
+            addBtn.disabled = isLocked;
+            addBtn.style.opacity = isLocked ? "0.45" : "1";
+            addBtn.style.cursor = isLocked ? "not-allowed" : "pointer";
+        }
+
+        updateUndoRedoUI();
+        if (gantt.$task) gantt.render();
+    }
+
     function quickAddTaskAt(date) {
+        if (isLocked) {
+            showToast("🔒 Diagram is locked (read-only)");
+            return;
+        }
         const id = gantt.uid();
         const defaultDate = date || new Date();
         gantt.createTask({
@@ -1673,12 +1975,20 @@
     }
 
     function quickAddTask() {
+        if (isLocked) {
+            showToast("🔒 Diagram is locked (read-only)");
+            return;
+        }
         const state = gantt.getScrollState();
         const cursorDate = gantt.dateFromPos(state.x + 80) || new Date();
         quickAddTaskAt(cursorDate);
     }
 
-    function toggleGrid(forceState) {
+    function toggleGrid(e, forceState) {
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+            e.preventDefault();
+        }
         const target = (forceState === undefined) ? !gantt.config.show_grid : forceState;
         if (gantt.config.show_grid !== target) {
             gantt.config.show_grid = target;
@@ -1692,8 +2002,10 @@
         updateGridToggleBtn();
     }
     function updateGridToggleBtn() {
-        const btn = document.getElementById('gridToggleBtn');
-        if (btn) btn.innerHTML = gantt.config.show_grid ? "📋 List" : "📋 List (Off)";
+        const expandBtn = document.getElementById('gridExpandBtn');
+        if (expandBtn) {
+            expandBtn.style.display = gantt.config.show_grid ? 'none' : 'inline-flex';
+        }
     }
     updateGridToggleBtn();
 
@@ -1794,6 +2106,7 @@
     // ===================================================================
     let currentEditingLinkId = null;
     gantt.attachEvent("onLinkDblClick", function(id) {
+        if (isLocked) return false;
         if (gantt.isLinkExists && gantt.isLinkExists(id)) openLinkEditor(id);
         return false;
     });
@@ -1873,8 +2186,26 @@
     gantt.attachEvent("onAfterTaskDelete", () => { scheduleSave(); renderFullGridLines(); updateTodayMarker(); });
     gantt.attachEvent("onAfterTaskMove", () => scheduleSave());
 
+    // Read-only guards
+    gantt.attachEvent("onBeforeLightbox", () => !isLocked);
+    gantt.attachEvent("onBeforeTaskAdd", () => !isLocked);
+    gantt.attachEvent("onBeforeTaskDelete", () => !isLocked);
+    gantt.attachEvent("onBeforeLinkAdd", () => !isLocked);
+    gantt.attachEvent("onBeforeLinkDelete", () => !isLocked);
+    gantt.attachEvent("onTaskDblClick", () => !isLocked);
+
+    // Save grid width when resized horizontally
+    gantt.attachEvent("onGridResizeEnd", function(old_width, new_width) {
+        scheduleSave();
+        return true;
+    });
+
     let isTaskDragging = false;
-    gantt.attachEvent("onBeforeTaskDrag", () => { isTaskDragging = true; return true; });
+    gantt.attachEvent("onBeforeTaskDrag", () => {
+        if (isLocked) return false;
+        isTaskDragging = true;
+        return true;
+    });
     gantt.attachEvent("onAfterTaskDrag", (id) => {
         isTaskDragging = false;
         const task = gantt.isTaskExists(id) ? gantt.getTask(id) : null;
@@ -1905,14 +2236,8 @@
     });
 
     function getExpansionStep() {
-        switch (currentZoomIndex) {
-            case 0: return { unit: "year", amount: 4 };
-            case 1: return { unit: "month", amount: 18 };
-            case 2: return { unit: "month", amount: 6 };
-            case 3: return { unit: "day", amount: 25 };
-            case 4: return { unit: "day", amount: 15 };
-            default: return { unit: "month", amount: 6 };
-        }
+        const lvl = zoomLevels[currentZoomIndex];
+        return (lvl && lvl.expandStep) ? lvl.expandStep : { unit: "month", amount: 6 };
     }
 
     function checkAndExpandTimeline() {
@@ -2008,6 +2333,11 @@
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
         if (!e.target.files.length) return;
+        if (isLocked) {
+            alert('Diagram is locked in read-only mode. Please unlock it before importing.');
+            e.target.value = '';
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (ev) => {
             try {
@@ -2041,11 +2371,13 @@
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            if (isLocked) return;
             e.preventDefault();
             if (e.shiftKey) redo(); else undo();
             return;
         }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            if (isLocked) return;
             e.preventDefault();
             redo();
             return;
@@ -2060,7 +2392,13 @@
             showToday();
             return;
         }
+        if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            toggleLock();
+            return;
+        }
         if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (isLocked) return;
             const selectedId = gantt.getSelectedId();
             if (selectedId && gantt.isTaskExists(selectedId)) {
                 e.preventDefault();
@@ -2185,21 +2523,43 @@
                 updateMagnetBtn();
             }
 
-            if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
-                currentZoomIndex = saved.zoomIndex;
-                const level = zoomLevels[currentZoomIndex];
-                gantt.config.scales = level.scales;
-                gantt.config.min_column_width = level.min_column_width;
-                gantt.config.scale_height = level.scale_height;
-                activeRowHeight = saved.activeRowHeight || level.row_height;
-                gantt.config.row_height = activeRowHeight;
-                document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
-                updateZoomLabel();
+            if (saved.zoomLevelName) {
+                const foundIdx = zoomLevels.findIndex(lvl => lvl.name === saved.zoomLevelName);
+                if (foundIdx !== -1) currentZoomIndex = foundIdx;
+                else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
+                    currentZoomIndex = saved.zoomIndex;
+                }
+            } else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
+                const legacyNames = ["year", "quarter", "month", "week", "day"];
+                if (saved.zoomIndex < legacyNames.length) {
+                    const matchIdx = zoomLevels.findIndex(lvl => lvl.name === legacyNames[saved.zoomIndex]);
+                    currentZoomIndex = (matchIdx !== -1) ? matchIdx : saved.zoomIndex;
+                } else {
+                    currentZoomIndex = saved.zoomIndex;
+                }
             }
+            const currentLevel = zoomLevels[currentZoomIndex] || zoomLevels[4];
+            gantt.config.scales = currentLevel.scales;
+            gantt.config.min_column_width = currentLevel.min_column_width;
+            gantt.config.scale_height = currentLevel.scale_height;
+            gantt.config.time_step = currentLevel.time_step || 60;
+            activeRowHeight = saved.activeRowHeight || currentLevel.row_height;
+            gantt.config.row_height = activeRowHeight;
+            document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
+            updateZoomLabel();
 
             if (saved.showGrid !== undefined) {
                 gantt.config.show_grid = saved.showGrid;
                 updateGridToggleBtn();
+            }
+
+            if (saved.gridWidth !== undefined && saved.gridWidth >= 50) {
+                gantt.config.grid_width = saved.gridWidth;
+            }
+
+            if (saved.isLocked !== undefined) {
+                isLocked = !!saved.isLocked;
+                applyLockState();
             }
 
             if (saved.searchText) {
