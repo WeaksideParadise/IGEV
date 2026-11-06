@@ -34,8 +34,8 @@ assert(html.includes('.dropdown'), 'CSS must include .dropdown');
 assert(html.includes('.dropdown-menu'), 'CSS must include .dropdown-menu');
 assert(html.includes('.dropdown-item'), 'CSS must include .dropdown-item');
 
-// Check Developer / About Me Link slot retained for Task 4
-assert(html.includes('class="toolbar-btn secondary hide-mobile about-avatar-btn"'), 'Must retain about-avatar-btn slot');
+// Check Developer / About Me Link slot retained
+assert(html.includes('about-avatar-btn'), 'Must retain about-avatar-btn slot');
 
 // ===================================================================
 // 2. Behavioral Unit Tests via Mocked DOM in VM

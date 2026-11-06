@@ -405,6 +405,51 @@
             font-size: 0.78rem;
         }
 
+        /* ==========================================================
+           DEVELOPER PROFILE AVATAR
+           ========================================================== */
+        .about-avatar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px 3px 4px;
+            border-radius: 20px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            color: var(--text);
+            text-decoration: none;
+            font-family: var(--font-display);
+            font-size: 0.82rem;
+            font-weight: 500;
+            line-height: 1;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .about-avatar-btn:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--shadow-glow, rgba(79, 227, 210, 0.4));
+            transform: translateY(-1px);
+            color: var(--accent);
+        }
+
+        .about-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid var(--accent);
+            display: block;
+            flex-shrink: 0;
+        }
+
+        .about-text {
+            color: inherit;
+            white-space: nowrap;
+        }
+
         .search-container { position: relative; display: inline-flex; align-items: center; }
         .search-input {
             width: 140px;
@@ -1179,6 +1224,8 @@
             .controls h2 { font-size: 1rem; }
             .search-input { width: 110px; }
             .search-input:focus { width: 140px; }
+            .about-text { display: none; }
+            .about-avatar-btn { padding: 2px; }
             .gantt_cal_light, .gantt_cal_light_wide {
                 width: 100vw !important; max-width: 100vw !important;
                 left: 0 !important; top: 0 !important;
@@ -1240,8 +1287,11 @@
             </div>
         </div>
 
-        <!-- Developer / About Me Link slot (retained for Task 4) -->
-        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="toolbar-btn secondary hide-mobile about-avatar-btn" title="Developer & Portfolio — weaksideparadise.me">👨‍💻 About Me</a>
+        <!-- Developer / About Me Profile Avatar -->
+        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="about-avatar-btn" title="Markus Meier — Developer & Portfolio (weaksideparadise.me)">
+            <img src="https://weaksideparadise.me/assets/char_highres.png" alt="Markus Meier" class="about-avatar" width="28" height="28" loading="lazy">
+            <span class="about-text">About</span>
+        </a>
         <input type="file" id="fileInput" accept=".json">
         <input type="color" id="linkColorInput">
     </div>
