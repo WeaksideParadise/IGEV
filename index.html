@@ -324,8 +324,12 @@
             display: none;
             position: absolute;
             top: calc(100% + 5px);
-            left: 0;
+            right: 0;
+            left: auto;
             min-width: 190px;
+            max-width: min(320px, 95vw);
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
             background: var(--bg-panel);
             border: 1px solid var(--border-strong);
             border-radius: 6px;
@@ -336,6 +340,15 @@
             gap: 2px;
             box-sizing: border-box;
             backdrop-filter: blur(8px);
+        }
+
+        .dropdown-menu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: var(--border-strong);
+            border-radius: 4px;
         }
 
         .dropdown-menu.show {
@@ -2897,6 +2910,45 @@
     // ===================================================================
     // TOOLBAR DROPDOWN MENUS (FILE & VIEW)
     // ===================================================================
+    function adjustDropdownPosition(menu, btn) {
+        if (!menu) return;
+        menu.style.left = '';
+        menu.style.right = '0';
+        menu.style.top = '';
+        menu.style.bottom = '';
+        menu.style.maxHeight = 'calc(100vh - 70px)';
+        menu.style.overflowY = 'auto';
+
+        if (typeof menu.getBoundingClientRect !== 'function') return;
+
+        const rect = menu.getBoundingClientRect();
+        // Check horizontal overflow against left/right viewport boundaries
+        if (rect.left < 8) {
+            menu.style.left = '0';
+            menu.style.right = 'auto';
+        }
+        if (typeof window !== 'undefined' && window.innerWidth) {
+            const currentRect = menu.getBoundingClientRect();
+            if (currentRect.right > window.innerWidth - 8) {
+                menu.style.right = '0';
+                menu.style.left = 'auto';
+            }
+        }
+        // Check vertical bottom overflow: flip upwards if closer to bottom
+        if (typeof window !== 'undefined' && window.innerHeight) {
+            const currentRect = menu.getBoundingClientRect();
+            if (currentRect.bottom > window.innerHeight - 8) {
+                const spaceAbove = btn && typeof btn.getBoundingClientRect === 'function' ? btn.getBoundingClientRect().top : 0;
+                if (spaceAbove > currentRect.height + 15) {
+                    menu.style.top = 'auto';
+                    menu.style.bottom = 'calc(100% + 5px)';
+                } else {
+                    menu.style.maxHeight = Math.max(120, window.innerHeight - currentRect.top - 12) + 'px';
+                }
+            }
+        }
+    }
+
     function toggleDropdown(menuId, btnId) {
         const menu = document.getElementById(menuId);
         const btn = btnId ? document.getElementById(btnId) : null;
@@ -2906,12 +2958,18 @@
         if (!isOpen) {
             menu.classList.add('show');
             if (btn) btn.setAttribute('aria-expanded', 'true');
+            adjustDropdownPosition(menu, btn);
         }
     }
 
     function closeAllDropdowns() {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {
             el.classList.remove('show');
+            el.style.top = '';
+            el.style.bottom = '';
+            el.style.left = '';
+            el.style.right = '';
+            el.style.maxHeight = '';
         });
         document.querySelectorAll('.dropdown-btn[aria-expanded="true"]').forEach(btn => {
             btn.setAttribute('aria-expanded', 'false');

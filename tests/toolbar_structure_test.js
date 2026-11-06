@@ -33,6 +33,10 @@ assert(html.includes('openShortcutsModal()'), 'openShortcutsModal must be presen
 assert(html.includes('.dropdown'), 'CSS must include .dropdown');
 assert(html.includes('.dropdown-menu'), 'CSS must include .dropdown-menu');
 assert(html.includes('.dropdown-item'), 'CSS must include .dropdown-item');
+assert(html.includes('right: 0') && html.includes('left: auto'), 'Dropdown menu must align right: 0 to prevent overflowing off-screen to the right');
+assert(html.includes('max-height: calc(100vh - 70px)'), 'Dropdown menu must clamp max-height to viewport height');
+assert(html.includes('overflow-y: auto'), 'Dropdown menu must allow vertical scrolling when taller than viewport');
+assert(html.includes('adjustDropdownPosition'), 'Must have adjustDropdownPosition logic');
 
 // Check Developer / About Me Link slot retained
 assert(html.includes('about-avatar-btn'), 'Must retain about-avatar-btn slot');
