@@ -450,6 +450,66 @@
             white-space: nowrap;
         }
 
+        /* ==========================================================
+           CONTEXT MENU (DESKTOP RIGHT-CLICK & MOBILE LONG-PRESS)
+           ========================================================== */
+        .custom-context-menu {
+            position: fixed;
+            z-index: 10000;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            min-width: 190px;
+            padding: 6px;
+            box-sizing: border-box;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .context-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            text-align: left;
+            padding: 8px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 5px;
+            color: var(--text);
+            font-family: var(--font-display);
+            font-size: 0.84rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.12s ease, color 0.12s ease;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .context-item:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .context-item.text-danger {
+            color: var(--accent-3);
+        }
+
+        .context-item.text-danger:hover {
+            background: var(--accent-3);
+            color: var(--bg);
+        }
+
+        .context-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+
         .search-container { position: relative; display: inline-flex; align-items: center; }
         .search-input {
             width: 140px;
@@ -1347,6 +1407,24 @@
 
 <div class="save-indicator" id="saveIndicator">✓ Saved</div>
 
+<!-- Custom Context Menu (Desktop Right-Click & Mobile Long-Press) -->
+<div id="customContextMenu" class="custom-context-menu" style="display: none;">
+    <div id="ctxTaskSection">
+        <button id="ctxEditTask" class="context-item">✏️ Edit Task</button>
+        <button id="ctxAddSubtask" class="context-item">➕ Add Subtask</button>
+        <button id="ctxToggleMilestone" class="context-item">🎯 Toggle Milestone/Task</button>
+        <div class="context-divider"></div>
+        <button id="ctxDeleteTask" class="context-item text-danger">🗑️ Delete Task</button>
+    </div>
+    <div id="ctxCanvasSection">
+        <button id="ctxAddTaskHere" class="context-item">➕ New Task Here</button>
+        <button id="ctxShowToday" class="context-item">📅 Jump to Today</button>
+        <div class="context-divider"></div>
+        <button id="ctxToggleLock" class="context-item">🔒 Toggle Lock</button>
+    </div>
+</div>
+
+
 <!-- Dependency Link Editor Modal -->
 <div id="linkEditorModal" class="modal-backdrop">
     <div class="modal-card">
@@ -2234,6 +2312,11 @@
             btn.title = isLocked ? "Diagram is locked (read-only). Click or press 'L' to unlock" : "Lock diagram to read-only mode (L)";
         }
 
+        const ctxLock = document.getElementById('ctxToggleLock');
+        if (ctxLock) {
+            ctxLock.innerHTML = isLocked ? "🔓 Unlock Diagram" : "🔒 Toggle Lock";
+        }
+
         const addBtn = document.querySelector('.primary-btn[onclick="quickAddTask()"]');
         if (addBtn) {
             addBtn.disabled = isLocked;
@@ -2888,6 +2971,317 @@
         }
     });
 
+        // ===================================================================
+    // CONTEXT MENU (DESKTOP RIGHT-CLICK & MOBILE LONG-PRESS)
+    // ===================================================================
+    let activeContextTaskId = null;
+    let activeContextDate = null;
+
+    function getTaskIdFromPointerEvent(e) {
+        if (typeof gantt !== 'undefined' && typeof gantt.locate === 'function') {
+            try {
+                const id = gantt.locate(e);
+                if (id !== null && id !== undefined && id !== '') return id;
+            } catch (_) {}
+        }
+        const target = e.target;
+        if (!target) return null;
+        const taskEl = target.closest('[task_id], .gantt_task_line, .gantt_row');
+        if (taskEl) {
+            return taskEl.getAttribute('task_id') || (taskEl.dataset ? taskEl.dataset.taskId : null) || null;
+        }
+        return null;
+    }
+
+    function getDateFromPointerEvent(e, fallbackClientX) {
+        if (typeof gantt === 'undefined' || typeof gantt.dateFromPos !== 'function') return new Date();
+        const clientX = (e && typeof e.clientX === 'number') ? e.clientX : fallbackClientX;
+        if (clientX === undefined || clientX === null) return new Date();
+        const taskArea = document.querySelector('.gantt_task_area') || document.querySelector('.gantt_data_area');
+        if (taskArea) {
+            const rect = taskArea.getBoundingClientRect();
+            const scrollX = gantt.getScrollState ? gantt.getScrollState().x : 0;
+            const xPos = clientX - rect.left + scrollX;
+            return gantt.dateFromPos(xPos) || new Date();
+        }
+        return new Date();
+    }
+
+    function showContextMenu(x, y, taskId, clickDate) {
+        const menu = document.getElementById('customContextMenu');
+        if (!menu) return;
+
+        activeContextTaskId = taskId || null;
+        activeContextDate = clickDate || null;
+
+        const taskSection = document.getElementById('ctxTaskSection');
+        const canvasSection = document.getElementById('ctxCanvasSection');
+
+        if (activeContextTaskId) {
+            if (taskSection) taskSection.style.display = 'block';
+            if (canvasSection) canvasSection.style.display = 'none';
+
+            const milestoneBtn = document.getElementById('ctxToggleMilestone');
+            if (milestoneBtn && typeof gantt !== 'undefined' && typeof gantt.isTaskExists === 'function' && gantt.isTaskExists(activeContextTaskId)) {
+                const task = gantt.getTask(activeContextTaskId);
+                if (task && task.type === 'milestone') {
+                    milestoneBtn.textContent = '🎯 Convert to Task';
+                } else {
+                    milestoneBtn.textContent = '🎯 Convert to Milestone';
+                }
+            }
+        } else {
+            if (taskSection) taskSection.style.display = 'none';
+            if (canvasSection) canvasSection.style.display = 'block';
+        }
+
+        if (typeof closeAllDropdowns === 'function') closeAllDropdowns();
+
+        menu.style.display = 'block';
+        menu.style.visibility = 'hidden';
+
+        const menuWidth = menu.offsetWidth || 190;
+        const menuHeight = menu.offsetHeight || 160;
+
+        const maxX = Math.max(10, window.innerWidth - menuWidth - 10);
+        const maxY = Math.max(10, window.innerHeight - menuHeight - 10);
+
+        const clampedX = Math.max(10, Math.min(x, maxX));
+        const clampedY = Math.max(10, Math.min(y, maxY));
+
+        menu.style.left = clampedX + 'px';
+        menu.style.top = clampedY + 'px';
+        menu.style.visibility = 'visible';
+    }
+
+    function hideContextMenu() {
+        const menu = document.getElementById('customContextMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+        activeContextTaskId = null;
+        activeContextDate = null;
+    }
+
+    function initContextMenu() {
+        const ganttContainer = document.getElementById('gantt_here');
+        if (!ganttContainer) return;
+
+        // Desktop right-click
+        ganttContainer.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            const taskId = getTaskIdFromPointerEvent(e);
+            const clickDate = getDateFromPointerEvent(e, e.clientX);
+            showContextMenu(e.clientX, e.clientY, taskId, clickDate);
+        });
+
+        // Mobile touch-and-hold (long-press ~400ms with 8px movement threshold)
+        let touchTimer = null;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchTarget = null;
+        let longPressFired = false;
+
+        ganttContainer.addEventListener('touchstart', function(e) {
+            if (e.touches.length !== 1) {
+                if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+                return;
+            }
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchTarget = touch.target;
+            longPressFired = false;
+
+            if (touchTimer) clearTimeout(touchTimer);
+            touchTimer = setTimeout(function() {
+                touchTimer = null;
+                longPressFired = true;
+
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(40); } catch (_) {}
+                }
+
+                const syntheticEvent = { target: touchTarget, clientX: touchStartX, clientY: touchStartY };
+                const taskId = getTaskIdFromPointerEvent(syntheticEvent);
+                const clickDate = getDateFromPointerEvent(syntheticEvent, touchStartX);
+
+                showContextMenu(touchStartX, touchStartY, taskId, clickDate);
+            }, 400);
+        }, { passive: true });
+
+        ganttContainer.addEventListener('touchmove', function(e) {
+            if (!touchTimer) return;
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const dist = Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY);
+                if (dist > 8) {
+                    clearTimeout(touchTimer);
+                    touchTimer = null;
+                }
+            }
+        }, { passive: true });
+
+        ganttContainer.addEventListener('touchend', function(e) {
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+            if (longPressFired) {
+                if (e.cancelable) e.preventDefault();
+                setTimeout(function() { longPressFired = false; }, 100);
+            }
+        });
+
+        ganttContainer.addEventListener('touchcancel', function(e) {
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+            longPressFired = false;
+        });
+
+        // Context Menu Item Actions
+        const ctxEditTask = document.getElementById('ctxEditTask');
+        if (ctxEditTask) {
+            ctxEditTask.addEventListener('click', function() {
+                const id = activeContextTaskId;
+                hideContextMenu();
+                if (id && typeof gantt !== 'undefined' && typeof gantt.showLightbox === 'function') {
+                    gantt.showLightbox(id);
+                }
+            });
+        }
+
+        const ctxAddSubtask = document.getElementById('ctxAddSubtask');
+        if (ctxAddSubtask) {
+            ctxAddSubtask.addEventListener('click', function() {
+                const parentId = activeContextTaskId;
+                hideContextMenu();
+                if (isLocked) {
+                    showToast('🔒 Diagram is locked (read-only)');
+                    return;
+                }
+                if (!parentId || typeof gantt === 'undefined') return;
+                const parentTask = (typeof gantt.getTask === 'function' && gantt.isTaskExists(parentId)) ? gantt.getTask(parentId) : null;
+                const id = (typeof gantt.uid === 'function') ? gantt.uid() : Date.now();
+                const startDate = (parentTask && parentTask.start_date) ? new Date(parentTask.start_date) : new Date();
+                gantt.createTask({
+                    id: id,
+                    text: 'New Subtask',
+                    start_date: startDate,
+                    duration: 2,
+                    progress: 0,
+                    parent: parentId,
+                    type: 'task',
+                    color: getThemeColor('task'),
+                    textColor: getThemeColor('text')
+                }, parentId);
+                if (typeof gantt.open === 'function') gantt.open(parentId);
+                if (typeof gantt.showLightbox === 'function') gantt.showLightbox(id);
+            });
+        }
+
+        const ctxToggleMilestone = document.getElementById('ctxToggleMilestone');
+        if (ctxToggleMilestone) {
+            ctxToggleMilestone.addEventListener('click', function() {
+                const id = activeContextTaskId;
+                hideContextMenu();
+                if (isLocked) {
+                    showToast('🔒 Diagram is locked (read-only)');
+                    return;
+                }
+                if (!id || typeof gantt === 'undefined' || !gantt.isTaskExists(id)) return;
+                const task = gantt.getTask(id);
+                if (!task) return;
+                if (task.type === 'milestone') {
+                    task.type = 'task';
+                    task.duration = Math.max(task.duration || 1, 1);
+                    task.color = getThemeColor('task');
+                } else {
+                    task.type = 'milestone';
+                    task.duration = 0;
+                    task.color = getThemeColor('milestone');
+                }
+                if (typeof gantt.updateTask === 'function') gantt.updateTask(id);
+                scheduleSave();
+                showToast('Toggled "' + (task.text || 'Task') + '" to ' + task.type);
+            });
+        }
+
+        const ctxDeleteTask = document.getElementById('ctxDeleteTask');
+        if (ctxDeleteTask) {
+            ctxDeleteTask.addEventListener('click', function() {
+                const id = activeContextTaskId;
+                hideContextMenu();
+                if (isLocked) {
+                    showToast('🔒 Diagram is locked (read-only)');
+                    return;
+                }
+                if (id && typeof gantt !== 'undefined' && gantt.isTaskExists(id)) {
+                    gantt.deleteTask(id);
+                    scheduleSave();
+                }
+            });
+        }
+
+        const ctxAddTaskHere = document.getElementById('ctxAddTaskHere');
+        if (ctxAddTaskHere) {
+            ctxAddTaskHere.addEventListener('click', function() {
+                const date = activeContextDate;
+                hideContextMenu();
+                if (isLocked) {
+                    showToast('🔒 Diagram is locked (read-only)');
+                    return;
+                }
+                if (date) {
+                    quickAddTaskAt(date);
+                } else {
+                    quickAddTask();
+                }
+            });
+        }
+
+        const ctxShowToday = document.getElementById('ctxShowToday');
+        if (ctxShowToday) {
+            ctxShowToday.addEventListener('click', function() {
+                hideContextMenu();
+                showToday();
+            });
+        }
+
+        const ctxToggleLock = document.getElementById('ctxToggleLock');
+        if (ctxToggleLock) {
+            ctxToggleLock.addEventListener('click', function() {
+                hideContextMenu();
+                toggleLock();
+            });
+        }
+
+        // Dismissal handlers
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('customContextMenu');
+            if (menu && menu.style.display !== 'none' && !e.target.closest('#customContextMenu')) {
+                hideContextMenu();
+            }
+        });
+
+        document.addEventListener('touchstart', function(e) {
+            const menu = document.getElementById('customContextMenu');
+            if (menu && menu.style.display !== 'none' && !e.target.closest('#customContextMenu')) {
+                hideContextMenu();
+            }
+        }, { passive: true });
+
+        window.addEventListener('resize', hideContextMenu);
+        window.addEventListener('scroll', hideContextMenu, true);
+        if (typeof gantt !== 'undefined' && typeof gantt.attachEvent === 'function') {
+            gantt.attachEvent('onGanttScroll', hideContextMenu);
+        }
+    }
+    initContextMenu();
+
+
     function openShortcutsModal() { document.getElementById('shortcutsModal').classList.add('show'); }
     function closeShortcutsModal() { document.getElementById('shortcutsModal').classList.remove('show'); }
     document.getElementById('shortcutsModal').addEventListener('click', function(e) {
@@ -2898,6 +3292,7 @@
         if (e.key === 'Escape') {
             closeAllDropdowns();
             closeShortcutsModal();
+            hideContextMenu();
             return;
         }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
