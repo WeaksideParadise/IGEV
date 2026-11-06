@@ -1487,6 +1487,7 @@
     gantt.config.grid_resize = true;
     gantt.config.keep_grid_width = false;
     gantt.config.min_grid_column_width = 30;
+    gantt.config.show_tasks_outside_timescale = true;
 
     const ganttColumns = [
         {
@@ -1707,15 +1708,44 @@
         return { minDate, maxDate };
     }
 
+    function getTimelineWindow(anchorDate, zoomLevel) {
+        const zoomName = typeof zoomLevel === "string" ? zoomLevel : (zoomLevel && zoomLevel.name);
+        const d = new Date(anchorDate || Date.now());
+        let start, end;
+        switch(zoomName) {
+            case "minute":
+                start = new Date(d.getTime() - 6 * 3600 * 1000);
+                end = new Date(d.getTime() + 6 * 3600 * 1000);
+                break;
+            case "15-min":
+                start = new Date(d.getTime() - 24 * 3600 * 1000);
+                end = new Date(d.getTime() + 24 * 3600 * 1000);
+                break;
+            case "hour":
+                start = new Date(d.getTime() - 4 * 24 * 3600 * 1000);
+                end = new Date(d.getTime() + 4 * 24 * 3600 * 1000);
+                break;
+            default:
+                return null;
+        }
+        return { startDate: start, endDate: end, start, end };
+    }
+
     // Guarantees the timeline is wide enough for instant mouse panning at current zoom scale
     function initTimelineDateRange(refDate) {
-        const projRange = getProjectDateRange();
         const anchor = refDate || new Date();
-        
+        const currentLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
+        const win = getTimelineWindow(anchor, currentLvl);
+        if (win) {
+            gantt.config.start_date = win.startDate;
+            gantt.config.end_date = win.endDate;
+            return;
+        }
+
+        const projRange = getProjectDateRange();
         let refMin = projRange.minDate ? new Date(Math.min(anchor.getTime(), projRange.minDate.getTime())) : anchor;
         let refMax = projRange.maxDate ? new Date(Math.max(anchor.getTime(), projRange.maxDate.getTime())) : anchor;
 
-        const currentLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
         const pad = currentLvl.pad || { unit: "month", before: 12, after: 18 };
 
         gantt.config.start_date = gantt.date.add(refMin, -pad.before, pad.unit);
@@ -1835,15 +1865,16 @@
         const containerH = gantt.$task.clientHeight || window.innerHeight;
         const taskCount = gantt.getTaskCount();
         const contentH = taskCount * rHeight;
-        const rowsNeeded = Math.max(1, Math.ceil((containerH - contentH + 300) / rHeight));
+        const rowsNeeded = Math.min(50, Math.max(1, Math.ceil((containerH - contentH + 300) / rHeight)));
 
         const scale = (typeof gantt.getScale === 'function') ? gantt.getScale() : null;
         const colDates = (scale && scale.trace_x) ? scale.trace_x : [];
         const defaultColW = gantt.config.min_column_width || 80;
 
         let rowCellsHtml = '';
+        const maxCols = Math.min(colDates.length, 1000);
         if (colDates.length > 0) {
-            for (let c = 0; c < colDates.length; c++) {
+            for (let c = 0; c < maxCols; c++) {
                 const d = colDates[c];
                 const isWk = (d.getDay() === 0 || d.getDay() === 6);
                 const w = (scale.width && scale.width[c]) ? scale.width[c] : defaultColW;
@@ -1908,7 +1939,7 @@
     });
 
     // ===================================================================
-    // TODAY VIEWPORT JUMP
+    // TODAY & TASK VIEWPORT JUMP
     // ===================================================================
     function showToday() {
         if (!gantt.$task) return;
@@ -1931,6 +1962,36 @@
         const scrollX = Math.max(0, posX - (containerWidth / 3));
         gantt.scrollTo(scrollX, gantt.getScrollState().y);
         updateTodayMarker();
+    }
+
+    function jumpToTask(taskOrId) {
+        if (!taskOrId || !gantt.$task) return;
+        const task = (typeof taskOrId === "object") ? taskOrId : gantt.getTask(taskOrId);
+        if (!task) return;
+        const targetDate = task.start_date ? new Date(task.start_date) : null;
+        if (!targetDate || isNaN(targetDate.getTime())) return;
+
+        const state = gantt.getState();
+        const minDate = gantt.config.start_date || state.min_date;
+        const maxDate = gantt.config.end_date || state.max_date;
+
+        if (!minDate || !maxDate || targetDate <= minDate || targetDate >= maxDate) {
+            initTimelineDateRange(targetDate);
+            isExpandingTimeline = true;
+            gantt.render();
+            renderFullGridLines();
+            updateTodayMarker();
+            setTimeout(() => { isExpandingTimeline = false; }, 80);
+        }
+
+        if (typeof gantt.showTask === "function") {
+            gantt.showTask(task.id);
+        } else {
+            const posX = gantt.posFromDate(targetDate);
+            const containerWidth = gantt.$task.getBoundingClientRect().width;
+            const scrollX = Math.max(0, posX - (containerWidth / 3));
+            gantt.scrollTo(scrollX, gantt.getScrollState().y);
+        }
     }
 
     // ===================================================================
@@ -2207,11 +2268,31 @@
 
         if (currentSearch) {
             let matches = 0;
+            let firstMatch = null;
             gantt.eachTask(t => {
-                if (t.text && t.text.toLowerCase().includes(currentSearch)) matches++;
+                if (t.text && t.text.toLowerCase().includes(currentSearch)) {
+                    matches++;
+                    if (!firstMatch) firstMatch = t;
+                }
             });
             searchBadge.textContent = matches + (matches === 1 ? " match" : " matches");
             searchBadge.style.display = "inline-block";
+
+            if (firstMatch && firstMatch.start_date) {
+                const targetDate = new Date(firstMatch.start_date);
+                const state = gantt.getState();
+                const minDate = gantt.config.start_date || state.min_date;
+                const maxDate = gantt.config.end_date || state.max_date;
+                if (!minDate || !maxDate || targetDate <= minDate || targetDate >= maxDate) {
+                    initTimelineDateRange(targetDate);
+                    isExpandingTimeline = true;
+                    gantt.render();
+                    renderFullGridLines();
+                    updateTodayMarker();
+                    setTimeout(() => { isExpandingTimeline = false; }, 80);
+                    if (typeof gantt.showTask === "function") gantt.showTask(firstMatch.id);
+                }
+            }
         } else {
             searchBadge.style.display = "none";
         }
@@ -2219,6 +2300,17 @@
     }
 
     searchInput.addEventListener('input', (e) => applySearch(e.target.value));
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === "Enter" && currentSearch) {
+            let firstMatch = null;
+            gantt.eachTask(t => {
+                if (!firstMatch && t.text && t.text.toLowerCase().includes(currentSearch)) {
+                    firstMatch = t;
+                }
+            });
+            if (firstMatch) jumpToTask(firstMatch);
+        }
+    });
     searchClear.addEventListener('click', () => {
         searchInput.value = "";
         applySearch("");
@@ -2377,6 +2469,11 @@
     gantt.attachEvent("onBeforeLinkDelete", () => !isLocked);
     gantt.attachEvent("onTaskDblClick", () => !isLocked);
 
+    gantt.attachEvent("onTaskClick", function(id) {
+        jumpToTask(id);
+        return true;
+    });
+
     // Save grid width when resized horizontally
     gantt.attachEvent("onGridResizeEnd", function(old_width, new_width) {
         scheduleSave();
@@ -2440,24 +2537,57 @@
         const threshold = Math.max(140, (gantt.config.min_column_width || 50) * 2);
         const step = getExpansionStep();
 
-        if (distFromLeft < threshold) {
-            const oldStart = new Date(curMinDate);
-            gantt.config.start_date = gantt.date.add(oldStart, -step.amount, step.unit);
-            isExpandingTimeline = true;
-            gantt.render();
-            renderFullGridLines();
-            updateTodayMarker();
-            const shift = gantt.posFromDate(oldStart);
-            gantt.scrollTo(s.x + shift, s.y);
-            setTimeout(() => { isExpandingTimeline = false; }, 120);
-        } else if (distFromRight < threshold) {
-            gantt.config.end_date = gantt.date.add(new Date(curMaxDate), step.amount, step.unit);
-            isExpandingTimeline = true;
-            gantt.render();
-            renderFullGridLines();
-            updateTodayMarker();
-            gantt.scrollTo(s.x, s.y);
-            setTimeout(() => { isExpandingTimeline = false; }, 120);
+        const currentLvl = zoomLevels[currentZoomIndex];
+        const zoomName = (currentLvl && currentLvl.name) || "month";
+        const isFine = ["minute", "15-min", "hour"].includes(zoomName);
+
+        if (isFine) {
+            const winDuration = curMaxDate.getTime() - curMinDate.getTime();
+            const shiftMs = Math.round(winDuration / 2);
+
+            if (distFromLeft < threshold) {
+                const currentDateAtScroll = gantt.dateFromPos(s.x) || new Date(curMinDate.getTime() + (curMaxDate.getTime() - curMinDate.getTime()) * (s.x / Math.max(1, totalWidth)));
+                gantt.config.start_date = new Date(curMinDate.getTime() - shiftMs);
+                gantt.config.end_date = new Date(curMaxDate.getTime() - shiftMs);
+                isExpandingTimeline = true;
+                gantt.render();
+                renderFullGridLines();
+                updateTodayMarker();
+                const newScrollX = gantt.posFromDate(currentDateAtScroll);
+                gantt.scrollTo(Math.max(0, newScrollX), s.y);
+                setTimeout(() => { isExpandingTimeline = false; }, 120);
+            } else if (distFromRight < threshold) {
+                const currentDateAtScroll = gantt.dateFromPos(s.x) || new Date(curMinDate.getTime() + (curMaxDate.getTime() - curMinDate.getTime()) * (s.x / Math.max(1, totalWidth)));
+                gantt.config.start_date = new Date(curMinDate.getTime() + shiftMs);
+                gantt.config.end_date = new Date(curMaxDate.getTime() + shiftMs);
+                isExpandingTimeline = true;
+                gantt.render();
+                renderFullGridLines();
+                updateTodayMarker();
+                const newScrollX = gantt.posFromDate(currentDateAtScroll);
+                gantt.scrollTo(Math.max(0, newScrollX), s.y);
+                setTimeout(() => { isExpandingTimeline = false; }, 120);
+            }
+        } else {
+            if (distFromLeft < threshold) {
+                const oldStart = new Date(curMinDate);
+                gantt.config.start_date = gantt.date.add(oldStart, -step.amount, step.unit);
+                isExpandingTimeline = true;
+                gantt.render();
+                renderFullGridLines();
+                updateTodayMarker();
+                const shift = gantt.posFromDate(oldStart);
+                gantt.scrollTo(s.x + shift, s.y);
+                setTimeout(() => { isExpandingTimeline = false; }, 120);
+            } else if (distFromRight < threshold) {
+                gantt.config.end_date = gantt.date.add(new Date(curMaxDate), step.amount, step.unit);
+                isExpandingTimeline = true;
+                gantt.render();
+                renderFullGridLines();
+                updateTodayMarker();
+                gantt.scrollTo(s.x, s.y);
+                setTimeout(() => { isExpandingTimeline = false; }, 120);
+            }
         }
     }
 
@@ -2751,8 +2881,21 @@
 
             // Restore wide timeline boundaries so panning is immediately active
             if (saved.startDate && saved.endDate) {
-                gantt.config.start_date = new Date(saved.startDate);
-                gantt.config.end_date = new Date(saved.endDate);
+                const curLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
+                const win = getTimelineWindow(saved.startDate, curLvl);
+                if (win) {
+                    const savedSpan = new Date(saved.endDate).getTime() - new Date(saved.startDate).getTime();
+                    const maxSpan = (win.endDate.getTime() - win.startDate.getTime()) * 1.5;
+                    if (savedSpan > maxSpan) {
+                        initTimelineDateRange(new Date(saved.startDate));
+                    } else {
+                        gantt.config.start_date = new Date(saved.startDate);
+                        gantt.config.end_date = new Date(saved.endDate);
+                    }
+                } else {
+                    gantt.config.start_date = new Date(saved.startDate);
+                    gantt.config.end_date = new Date(saved.endDate);
+                }
             } else {
                 initTimelineDateRange(new Date());
             }
