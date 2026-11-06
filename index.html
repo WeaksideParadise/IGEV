@@ -312,6 +312,99 @@
             color: var(--bg);
         }
 
+        /* ==========================================================
+           DROPDOWN MENUS (FILE & VIEW)
+           ========================================================== */
+        .dropdown {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            min-width: 190px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            box-shadow: var(--shadow-glow), 0 12px 30px rgba(0, 0, 0, 0.4);
+            padding: 5px;
+            z-index: 1000;
+            flex-direction: column;
+            gap: 2px;
+            box-sizing: border-box;
+            backdrop-filter: blur(8px);
+        }
+
+        .dropdown-menu.show {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dropdown-item {
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text);
+            padding: 7px 10px;
+            font-size: 0.82rem;
+            font-family: var(--font-body);
+            font-weight: 500;
+            text-align: left;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.12s ease, color 0.12s ease;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .dropdown-item:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .dropdown-item.text-danger {
+            color: var(--accent-3);
+        }
+
+        .dropdown-item.text-danger:hover {
+            background: var(--accent-3);
+            color: var(--bg);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        .dropdown-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 8px;
+            gap: 8px;
+        }
+
+        .dropdown-row label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-family: var(--font-display);
+            font-weight: 500;
+            user-select: none;
+        }
+
+        .dropdown-row .theme-select {
+            flex: 1;
+            padding: 4px 24px 4px 8px;
+            font-size: 0.78rem;
+        }
+
         .search-container { position: relative; display: inline-flex; align-items: center; }
         .search-input {
             width: 140px;
@@ -1113,21 +1206,42 @@
         <button id="redoBtn" class="secondary" title="Redo (Ctrl+Y)" disabled>↪ Redo</button>
         <button class="primary-btn" onclick="quickAddTask()" title="Add Task at Current View">➕ Task</button>
         <button class="secondary" onclick="showToday()" title="Jump to Today (Space)">📅 Today</button>
-        <button class="secondary" id="lockToggleBtn" onclick="toggleLock()" title="Lock diagram to read-only mode (L)">🔓 Edit</button>
-        <button class="secondary" id="magnetToggleBtn" onclick="toggleMagnetism()" title="Snap dates to scale boundaries">🧲 Snap: Off</button>
-        <button class="secondary" onclick="document.getElementById('fileInput').click()" title="Load Gantt JSON">📂 Import</button>
-        <button class="secondary" onclick="saveData()" title="Download JSON file">💾 Export</button>
-        <button class="secondary hide-mobile" onclick="exportCSV()" title="Export spreadsheet CSV">📊 CSV</button>
-        <select id="themeSelector" class="theme-select" title="Switch color theme">
-            <option value="void">🌌 Void</option>
-            <option value="light" selected>☀️ Light</option>
-            <option value="amber">🔶 Amber</option>
-            <option value="matrix">💚 Matrix</option>
-        </select>
-        <!-- Developer / About Me Link -->
-        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="toolbar-btn secondary hide-mobile" title="Developer & Portfolio — weaksideparadise.me">👨‍💻 About Me</a>
-        <button class="secondary" onclick="openShortcutsModal()" title="Help & Shortcuts (?)">❓</button>
-        <button class="danger" onclick="clearSavedState()" title="Reset all data">🗑️</button>
+
+        <!-- File Menu Dropdown -->
+        <div class="dropdown">
+            <button id="fileMenuBtn" class="secondary dropdown-btn" aria-haspopup="true" aria-expanded="false" title="File options">📁 File ▾</button>
+            <div id="fileDropdown" class="dropdown-menu">
+                <button class="dropdown-item" onclick="document.getElementById('fileInput').click()">📂 Import JSON</button>
+                <button class="dropdown-item" onclick="saveData()">💾 Export JSON</button>
+                <button class="dropdown-item" onclick="exportCSV()">📊 Export CSV</button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger" onclick="clearSavedState()">🗑️ Reset Workspace</button>
+            </div>
+        </div>
+
+        <!-- View Menu Dropdown -->
+        <div class="dropdown">
+            <button id="viewMenuBtn" class="secondary dropdown-btn" aria-haspopup="true" aria-expanded="false" title="View & Settings">⚙️ View ▾</button>
+            <div id="viewDropdown" class="dropdown-menu">
+                <button class="dropdown-item" id="lockToggleBtn" onclick="toggleLock()">🔓 Edit Mode</button>
+                <button class="dropdown-item" id="magnetToggleBtn" onclick="toggleMagnetism()">🧲 Snap: Off</button>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-row">
+                    <label for="themeSelector">Theme:</label>
+                    <select id="themeSelector" class="theme-select" title="Switch color theme">
+                        <option value="void">🌌 Void</option>
+                        <option value="light" selected>☀️ Light</option>
+                        <option value="amber">🔶 Amber</option>
+                        <option value="matrix">💚 Matrix</option>
+                    </select>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" onclick="openShortcutsModal()">❓ Help & Shortcuts</button>
+            </div>
+        </div>
+
+        <!-- Developer / About Me Link slot (retained for Task 4) -->
+        <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="toolbar-btn secondary hide-mobile about-avatar-btn" title="Developer & Portfolio — weaksideparadise.me">👨‍💻 About Me</a>
         <input type="file" id="fileInput" accept=".json">
         <input type="color" id="linkColorInput">
     </div>
@@ -1468,11 +1582,9 @@
         if (snapEnabled) {
             btn.innerHTML = '🧲 Snap: On';
             btn.classList.add('magnet-on');
-            btn.classList.remove('secondary');
         } else {
             btn.innerHTML = '🧲 Snap: Off';
             btn.classList.remove('magnet-on');
-            btn.classList.add('secondary');
         }
     }
 
@@ -2067,7 +2179,7 @@
 
         const btn = document.getElementById('lockToggleBtn');
         if (btn) {
-            btn.innerHTML = isLocked ? "🔒 Locked" : "🔓 Edit";
+            btn.innerHTML = isLocked ? "🔒 Locked Mode" : "🔓 Edit Mode";
             btn.classList.toggle('btn-locked', isLocked);
             btn.title = isLocked ? "Diagram is locked (read-only). Click or press 'L' to unlock" : "Lock diagram to read-only mode (L)";
         }
@@ -2674,6 +2786,58 @@
     // ===================================================================
     // KEYBOARD SHORTCUTS
     // ===================================================================
+    // ===================================================================
+    // TOOLBAR DROPDOWN MENUS (FILE & VIEW)
+    // ===================================================================
+    function toggleDropdown(menuId, btnId) {
+        const menu = document.getElementById(menuId);
+        const btn = btnId ? document.getElementById(btnId) : null;
+        if (!menu) return;
+        const isOpen = menu.classList.contains('show');
+        closeAllDropdowns();
+        if (!isOpen) {
+            menu.classList.add('show');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function closeAllDropdowns() {
+        document.querySelectorAll('.dropdown-menu.show').forEach(el => {
+            el.classList.remove('show');
+        });
+        document.querySelectorAll('.dropdown-btn[aria-expanded="true"]').forEach(btn => {
+            btn.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    const fileMenuBtn = document.getElementById('fileMenuBtn');
+    if (fileMenuBtn) {
+        fileMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleDropdown('fileDropdown', 'fileMenuBtn');
+        });
+    }
+
+    const viewMenuBtn = document.getElementById('viewMenuBtn');
+    if (viewMenuBtn) {
+        viewMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleDropdown('viewDropdown', 'viewMenuBtn');
+        });
+    }
+
+    document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+        item.addEventListener('click', function() {
+            closeAllDropdowns();
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+            closeAllDropdowns();
+        }
+    });
+
     function openShortcutsModal() { document.getElementById('shortcutsModal').classList.add('show'); }
     function closeShortcutsModal() { document.getElementById('shortcutsModal').classList.remove('show'); }
     document.getElementById('shortcutsModal').addEventListener('click', function(e) {
@@ -2681,6 +2845,11 @@
     });
 
     window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllDropdowns();
+            closeShortcutsModal();
+            return;
+        }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
