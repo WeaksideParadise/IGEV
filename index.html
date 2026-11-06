@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="void">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -15,8 +15,8 @@
     <script>
       (function() {
         try {
-          var t = localStorage.getItem('igev_theme');
-          if (t) document.documentElement.setAttribute('data-theme', t);
+          var t = localStorage.getItem('igev_theme') || 'light';
+          document.documentElement.setAttribute('data-theme', t);
         } catch(e) {}
       })();
     </script>
@@ -1120,7 +1120,7 @@
         <button class="secondary hide-mobile" onclick="exportCSV()" title="Export spreadsheet CSV">📊 CSV</button>
         <select id="themeSelector" class="theme-select" title="Switch color theme">
             <option value="void">🌌 Void</option>
-            <option value="light">☀️ Light</option>
+            <option value="light" selected>☀️ Light</option>
             <option value="amber">🔶 Amber</option>
             <option value="matrix">💚 Matrix</option>
         </select>
@@ -1260,15 +1260,15 @@
     };
 
     function getCurrentTheme() {
-        return document.documentElement.getAttribute('data-theme') || 'void';
+        return document.documentElement.getAttribute('data-theme') || 'light';
     }
     function getThemeColor(key) {
         const t = getCurrentTheme();
-        return (THEME_DEFAULTS[t] && THEME_DEFAULTS[t][key]) || THEME_DEFAULTS.void[key];
+        return (THEME_DEFAULTS[t] && THEME_DEFAULTS[t][key]) || THEME_DEFAULTS.light[key] || THEME_DEFAULTS.void[key];
     }
 
     function setTheme(name) {
-        if (!THEME_DEFAULTS[name]) name = 'void';
+        if (!THEME_DEFAULTS[name]) name = 'light';
         document.documentElement.setAttribute('data-theme', name);
         try { localStorage.setItem('igev_theme', name); } catch(e) {}
         const sel = document.getElementById('themeSelector');
