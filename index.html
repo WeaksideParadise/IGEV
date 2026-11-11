@@ -201,6 +201,50 @@
             --active-row-height: 35px;
         }
 
+        [data-theme="dark-studio"] {
+            --wp-void: #181818;
+            --wp-abyss: #222222;
+            --wp-panel: #2a2a2a;
+            --wp-raise: #333333;
+            --wp-line: #3c3c3c;
+            --wp-line2: #525252;
+            --wp-ink: #f0f0f0;
+            --wp-dim: #b0b0b0;
+            --wp-faint: #707070;
+            --wp-cyan: #3788ff;
+            --wp-amber: #f59e0b;
+            --wp-magenta: #ff4d6d;
+            --wp-lime: #10b981;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 2px 12px rgba(0, 0, 0, 0.45);
+
+            --font-body: 'Space Grotesk', system-ui, sans-serif;
+            --font-display: 'Chakra Petch', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+            --task-default: #3788ff;
+            --task-project: #10b981;
+            --task-milestone: #ff4d6d;
+            --link-default: #f59e0b;
+            --weekend-bg: rgba(255, 255, 255, 0.025);
+            --selected-bg: rgba(55, 136, 255, 0.16);
+            --task-text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            --active-row-height: 35px;
+        }
+
         /* ==========================================================
            BASE LAYOUT
            ========================================================== */
@@ -1333,6 +1377,7 @@
                         <option value="light" selected>☀️ Light</option>
                         <option value="amber">🔶 Amber</option>
                         <option value="matrix">💚 Matrix</option>
+                        <option value="dark-studio">🎬 Dark-Studio</option>
                     </select>
                 </div>
                 <div class="dropdown-divider"></div>
@@ -1486,10 +1531,11 @@
     // THEME MANAGEMENT
     // ===================================================================
     const THEME_DEFAULTS = {
-        void:   { task: '#4fe3d2', project: '#7bf0a4', milestone: '#ff5c86', link: '#ffb648', text: '#ffffff' },
-        light:  { task: '#0284c7', project: '#16a34a', milestone: '#e11d48', link: '#ea580c', text: '#ffffff' },
-        amber:  { task: '#ffaa00', project: '#ffee88', milestone: '#ff6600', link: '#ffdd00', text: '#000000' },
-        matrix: { task: '#00ff41', project: '#aaffaa', milestone: '#00bb22', link: '#88ff88', text: '#000000' }
+        void:          { task: '#4fe3d2', project: '#7bf0a4', milestone: '#ff5c86', link: '#ffb648', text: '#ffffff' },
+        light:         { task: '#0284c7', project: '#16a34a', milestone: '#e11d48', link: '#ea580c', text: '#ffffff' },
+        amber:         { task: '#ffaa00', project: '#ffee88', milestone: '#ff6600', link: '#ffdd00', text: '#000000' },
+        matrix:        { task: '#00ff41', project: '#aaffaa', milestone: '#00bb22', link: '#88ff88', text: '#000000' },
+        'dark-studio': { task: '#3788ff', project: '#10b981', milestone: '#ff4d6d', link: '#f59e0b', text: '#ffffff' }
     };
 
     function getCurrentTheme() {

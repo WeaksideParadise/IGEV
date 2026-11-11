@@ -31,6 +31,12 @@ assert(indexHtml.includes("if (!THEME_DEFAULTS[name]) name = 'light';"), 'setThe
 // Check themeSelector default selected option
 assert(indexHtml.includes('<option value="light" selected>☀️ Light</option>'), 'themeSelector option light must be selected');
 
+// Check dark-studio theme static presence
+assert(indexHtml.includes('[data-theme="dark-studio"]'), 'index.html must include [data-theme="dark-studio"] styles');
+assert(datenschutzHtml.includes('[data-theme="dark-studio"]'), 'datenschutz.html must include [data-theme="dark-studio"] styles');
+assert(indexHtml.includes('<option value="dark-studio">🎬 Dark-Studio</option>'), 'themeSelector must have dark-studio option');
+assert(datenschutzHtml.includes('dark-studio'), 'datenschutz.html must document dark-studio in privacy table');
+
 // ===================================================================
 // 2. Behavioral Unit Tests via Built-in VM
 // ===================================================================
@@ -87,6 +93,14 @@ function createMockEnv(initialStorage = {}) {
   assert.strictEqual(attributes['data-theme'], 'void', 'Early script must preserve saved void theme');
 }
 
+// Test early script behavior when localStorage has 'dark-studio'
+{
+  const { context, attributes } = createMockEnv({ igev_theme: 'dark-studio' });
+  const earlyScriptMatch = indexHtml.match(/<script>\s*(\(function\(\)[\s\S]*?localStorage[\s\S]*?\}\)\(\);)\s*<\/script>/);
+  vm.runInContext(earlyScriptMatch[1], context);
+  assert.strictEqual(attributes['data-theme'], 'dark-studio', 'Early script must preserve saved dark-studio theme');
+}
+
 // Test THEME MANAGEMENT script functions
 {
   const { context, attributes, storage, elements } = createMockEnv();
@@ -113,6 +127,25 @@ function createMockEnv(initialStorage = {}) {
   assert.strictEqual(storage['igev_theme'], 'amber');
   assert.strictEqual(context.getCurrentTheme(), 'amber');
   assert.strictEqual(context.getThemeColor('task'), '#ffaa00');
+
+  // Check dark-studio theme in THEME_DEFAULTS
+  const studioDefaults = vm.runInContext('THEME_DEFAULTS["dark-studio"]', context);
+  assert(studioDefaults, 'THEME_DEFAULTS must contain dark-studio');
+  assert.strictEqual(studioDefaults.task, '#3788ff');
+  assert.strictEqual(studioDefaults.project, '#10b981');
+  assert.strictEqual(studioDefaults.milestone, '#ff4d6d');
+  assert.strictEqual(studioDefaults.link, '#f59e0b');
+  assert.strictEqual(studioDefaults.text, '#ffffff');
+
+  // setTheme to 'dark-studio'
+  context.setTheme('dark-studio');
+  assert.strictEqual(attributes['data-theme'], 'dark-studio');
+  assert.strictEqual(storage['igev_theme'], 'dark-studio');
+  assert.strictEqual(context.getCurrentTheme(), 'dark-studio');
+  assert.strictEqual(context.getThemeColor('task'), '#3788ff');
+  assert.strictEqual(context.getThemeColor('project'), '#10b981');
+  assert.strictEqual(context.getThemeColor('milestone'), '#ff4d6d');
+  assert.strictEqual(context.getThemeColor('link'), '#f59e0b');
 }
 
 console.log('Task 1 tests passed.');

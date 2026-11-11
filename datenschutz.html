@@ -155,6 +155,41 @@
             --font-mono: 'JetBrains Mono', monospace;
         }
 
+        [data-theme="dark-studio"] {
+            --wp-void: #181818;
+            --wp-abyss: #222222;
+            --wp-panel: #2a2a2a;
+            --wp-raise: #333333;
+            --wp-line: #3c3c3c;
+            --wp-line2: #525252;
+            --wp-ink: #f0f0f0;
+            --wp-dim: #b0b0b0;
+            --wp-faint: #707070;
+            --wp-cyan: #3788ff;
+            --wp-amber: #f59e0b;
+            --wp-magenta: #ff4d6d;
+            --wp-lime: #10b981;
+
+            --bg: var(--wp-void);
+            --bg-surface: var(--wp-abyss);
+            --bg-raised: var(--wp-raise);
+            --bg-panel: var(--wp-panel);
+            --border: var(--wp-line);
+            --border-strong: var(--wp-line2);
+            --text: var(--wp-ink);
+            --text-dim: var(--wp-dim);
+            --text-faint: var(--wp-faint);
+            --accent: var(--wp-cyan);
+            --accent-2: var(--wp-amber);
+            --accent-3: var(--wp-magenta);
+            --accent-4: var(--wp-lime);
+            --shadow-glow: 0 2px 12px rgba(0, 0, 0, 0.45);
+
+            --font-body: 'Space Grotesk', system-ui, sans-serif;
+            --font-display: 'Chakra Petch', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+        }
+
         * { box-sizing: border-box; }
         html, body {
             margin: 0; padding: 0;
@@ -513,7 +548,7 @@
             <tbody>
                 <tr>
                     <td><code class="code-pill">igev_theme</code></td>
-                    <td>Ausgewähltes Farbthema (z. B. <em>void</em>, <em>light</em>, <em>amber</em>, <em>matrix</em>) zur konsistenten visuellen Darstellung.</td>
+                    <td>Ausgewähltes Farbthema (z. B. <em>void</em>, <em>light</em>, <em>amber</em>, <em>matrix</em>, <em>dark-studio</em>) zur konsistenten visuellen Darstellung.</td>
                     <td>Ausschließlich lokal im Webbrowser</td>
                 </tr>
                 <tr>
