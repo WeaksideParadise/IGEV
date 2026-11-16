@@ -615,7 +615,6 @@
             color: var(--text);
         }
 
-        /* Guarantee .gantt_data_area always spans full viewport height even with 0 tasks */
         .gantt_data_area {
             min-height: calc(100% - 50px) !important;
             height: auto !important;
@@ -1526,6 +1525,7 @@
 <script>
     let isExpandingTimeline = false;
     let todayMarkerId = null;
+    let visualRefreshQueued = false;
 
     // ===================================================================
     // THEME MANAGEMENT
@@ -1568,6 +1568,37 @@
     })();
 
     // ===================================================================
+    // TOAST / SAVE INDICATOR & VISUAL REFRESH HELPER
+    // ===================================================================
+    function showSaveIndicator(text = "✓ Saved") {
+        const el = document.getElementById('saveIndicator');
+        if (!el) return;
+        el.textContent = text;
+        el.classList.add('visible');
+        setTimeout(() => el.classList.remove('visible'), 1300);
+    }
+
+    function showToast(text) {
+        showSaveIndicator(text);
+    }
+
+    function queueVisualRefresh() {
+        if (visualRefreshQueued) return;
+        visualRefreshQueued = true;
+        requestAnimationFrame(() => {
+            visualRefreshQueued = false;
+            if (!gantt.$task) return;
+            isExpandingTimeline = true;
+            rebuildAllLinkStyles();
+            gantt.render();
+            renderFullGridLines();
+            updateTodayMarker();
+            updateEmptyState();
+            setTimeout(() => { isExpandingTimeline = false; }, 60);
+        });
+    }
+
+    // ===================================================================
     // HISTORY (UNDO / REDO) & GLOBAL STATE
     // ===================================================================
     let isLocked = false;
@@ -1597,11 +1628,12 @@
             gantt.clearAll();
             gantt.parse(state);
             rebuildAllLinkStyles();
+            gantt.render();
             renderFullGridLines();
             updateTodayMarker();
             updateEmptyState();
             updateUndoRedoUI();
-            scheduleSave();
+            saveStateToStorage(false);
             isHistoryOperating = false;
         }
     }
@@ -1615,11 +1647,12 @@
             gantt.clearAll();
             gantt.parse(state);
             rebuildAllLinkStyles();
+            gantt.render();
             renderFullGridLines();
             updateTodayMarker();
             updateEmptyState();
             updateUndoRedoUI();
-            scheduleSave();
+            saveStateToStorage(false);
             isHistoryOperating = false;
         }
     }
@@ -1640,15 +1673,7 @@
     const STORAGE_KEY = 'igev_gantt_state_v3';
     let saveTimeout = null;
 
-    function showSaveIndicator(text = "✓ Saved") {
-        const el = document.getElementById('saveIndicator');
-        if (!el) return;
-        el.textContent = text;
-        el.classList.add('visible');
-        setTimeout(() => el.classList.remove('visible'), 1300);
-    }
-
-    function saveStateToStorage(showToast = true) {
+    function saveStateToStorage(showToastMsg = true) {
         try {
             const scrollState = gantt.getScrollState();
             const state = {
@@ -1670,7 +1695,7 @@
                 endDate: gantt.config.end_date ? gantt.config.end_date.toISOString() : null
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-            if (showToast) showSaveIndicator("✓ Saved");
+            if (showToastMsg) showSaveIndicator("✓ Saved");
         } catch (e) {
             console.warn('Failed to save state:', e);
         }
@@ -1696,7 +1721,6 @@
         }
         if (!confirm('Clear entire diagram and reset workspace?')) return;
 
-        // Laufende Auto-Save-/Scroll-Timer abbrechen
         clearTimeout(saveTimeout);
         clearTimeout(scrollSaveTimer);
         clearTimeout(scrollExpandTimer);
@@ -1704,21 +1728,17 @@
         isHistoryOperating = true;
         isExpandingTimeline = true;
 
-        // Alle Tasks, Links und dynamischen Link-Styles entfernen
         gantt.clearAll();
         rebuildAllLinkStyles();
 
-        // File-Input zurücksetzen (damit dieselbe Datei später wieder importiert werden kann)
         const fileInput = document.getElementById('fileInput');
         if (fileInput) fileInput.value = '';
 
-        // Suche zurücksetzen
         currentSearch = "";
         if (searchInput) searchInput.value = "";
         if (searchClear) searchClear.style.display = "none";
         if (searchBadge) searchBadge.style.display = "none";
 
-        // Snap, Lock & Grid zurücksetzen
         snapEnabled = false;
         applyMagnetismState();
         updateMagnetBtn();
@@ -1730,7 +1750,6 @@
         gantt.config.grid_width = isSmallScreen ? 260 : 400;
         updateGridToggleBtn();
 
-        // Zoom auf Standard ("month", Index 4) zurücksetzen
         currentZoomIndex = 4;
         const defaultLevel = zoomLevels[currentZoomIndex];
         gantt.config.scales = defaultLevel.scales;
@@ -1742,14 +1761,12 @@
         document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
         updateZoomLabel();
 
-        // Gespeicherten Zustand & Theme aus localStorage entfernen
         try {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('igev_theme');
         } catch (e) {}
         setTheme('light');
 
-        // Timeline neu auf "Heute" zentrieren & Willkommensmenü anzeigen
         initTimelineDateRange(new Date());
         gantt.render();
         renderFullGridLines();
@@ -1757,7 +1774,6 @@
         showToday();
         updateEmptyState();
 
-        // Undo/Redo-Verlauf leeren
         historyStack.length = 0;
         historyPointer = -1;
         isHistoryOperating = false;
@@ -1765,6 +1781,15 @@
 
         setTimeout(() => { isExpandingTimeline = false; }, 120);
         showSaveIndicator("🗑️ Workspace reset");
+    }
+
+    function scheduleSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            saveStateToStorage(true);
+            recordHistory();
+            updateEmptyState();
+        }, 500);
     }
 
     // ===================================================================
@@ -1871,7 +1896,6 @@
     gantt.templates.timeline_cell_class = (task, date) => (date.getDay() === 0 || date.getDay() === 6) ? "weekend" : "";
     gantt.templates.link_class = (link) => "link_id_" + link.id;
 
-    // Enable marker, drag_timeline for mouse panning, and tooltip
     gantt.plugins({
         tooltip: true,
         drag_timeline: true,
@@ -2065,7 +2089,6 @@
         return { startDate: start, endDate: end, start, end };
     }
 
-    // Guarantees the timeline is wide enough for instant mouse panning at current zoom scale
     function initTimelineDateRange(refDate) {
         const anchor = refDate || new Date();
         const currentLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
@@ -2169,7 +2192,6 @@
         gantt.config.row_height = activeRowHeight;
         document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
         
-        // Initialize expansive dates right away so pan works immediately
         initTimelineDateRange(new Date());
 
         gantt.init("gantt_here");
@@ -2197,7 +2219,9 @@
 
         const rHeight = gantt.config.row_height || 35;
         const containerH = gantt.$task.clientHeight || window.innerHeight;
-        const taskCount = gantt.getTaskCount();
+        const taskCount = (typeof gantt.getVisibleTaskCount === 'function')
+            ? gantt.getVisibleTaskCount()
+            : gantt.getTaskCount();
         const contentH = taskCount * rHeight;
         const rowsNeeded = Math.min(50, Math.max(1, Math.ceil((containerH - contentH + 300) / rHeight)));
 
@@ -2222,7 +2246,6 @@
         for (let i = 0; i < rowsNeeded; i++) {
             const top = contentH + (i * rHeight);
 
-            // Timeline Row
             const tRow = document.createElement('div');
             tRow.className = 'gantt_task_row gantt_filler_row';
             tRow.style.top = top + 'px';
@@ -2241,7 +2264,6 @@
             });
             fragT.appendChild(tRow);
 
-            // Grid Row
             if (gridData && gantt.config.show_grid) {
                 const gRow = document.createElement('div');
                 gRow.className = 'gantt_row gantt_filler_row';
@@ -2266,10 +2288,12 @@
     gantt.attachEvent("onGanttRender", () => {
         renderFullGridLines();
         updateTodayMarker();
+        updateEmptyState();
     });
     gantt.attachEvent("onDataRender", () => {
         renderFullGridLines();
         updateTodayMarker();
+        updateEmptyState();
     });
 
     // ===================================================================
@@ -2335,7 +2359,8 @@
         const count = gantt.getTaskCount();
         const overlay = document.getElementById('emptyStateOverlay');
         if (!overlay) return;
-        if (count === 0) {
+        const lightboxOpen = !!(gantt.getState && gantt.getState().lightbox);
+        if (count === 0 && !lightboxOpen) {
             overlay.classList.add('visible');
         } else {
             overlay.classList.remove('visible');
@@ -2429,7 +2454,7 @@
         }
         const id = gantt.uid();
         const defaultDate = date || new Date();
-        gantt.createTask({
+        const createdId = gantt.createTask({
             id: id,
             text: "New Task",
             start_date: defaultDate,
@@ -2439,7 +2464,10 @@
             color: getThemeColor('task'),
             textColor: getThemeColor('text')
         });
-        gantt.showLightbox(id);
+        if (createdId && !(gantt.getState && gantt.getState().lightbox)) {
+            gantt.showLightbox(createdId);
+        }
+        updateEmptyState();
     }
 
     function quickAddTask() {
@@ -2604,6 +2632,7 @@
         currentSearch = (query || "").trim().toLowerCase();
         searchClear.style.display = currentSearch ? "block" : "none";
         gantt.refreshData();
+        renderFullGridLines();
 
         if (currentSearch) {
             let matches = 0;
@@ -2744,8 +2773,9 @@
             const link = gantt.getLink(currentEditingLinkId);
             link.color = document.getElementById('linkEditorColor').value;
             link.type = document.getElementById('linkEditorType').value;
-            injectLinkColorStyle(currentEditingLinkId, link.color);
             gantt.updateLink(currentEditingLinkId);
+            rebuildAllLinkStyles();
+            queueVisualRefresh();
             closeLinkEditor();
             scheduleSave();
         }
@@ -2755,6 +2785,7 @@
         if (currentEditingLinkId && (gantt.isLinkExists ? gantt.isLinkExists(currentEditingLinkId) : gantt.getLink(currentEditingLinkId))) {
             gantt.deleteLink(currentEditingLinkId);
             closeLinkEditor();
+            queueVisualRefresh();
             scheduleSave();
         }
     }
@@ -2764,15 +2795,21 @@
     });
 
     gantt.attachEvent("onAfterLinkUpdate", function(id, link) {
-        if (link.color) injectLinkColorStyle(id, link.color);
+        rebuildAllLinkStyles();
+        queueVisualRefresh();
         scheduleSave();
     });
     gantt.attachEvent("onAfterLinkAdd", function(id, link) {
         if (!link.color) link.color = getThemeColor('link');
-        injectLinkColorStyle(id, link.color);
+        rebuildAllLinkStyles();
+        queueVisualRefresh();
         scheduleSave();
     });
-    gantt.attachEvent("onLinkDeleted", () => scheduleSave());
+    gantt.attachEvent("onAfterLinkDelete", () => {
+        rebuildAllLinkStyles();
+        queueVisualRefresh();
+        scheduleSave();
+    });
 
     function injectLinkColorStyle(linkId, color) {
         const styleSheet = document.getElementById('dynamic-link-styles');
@@ -2793,12 +2830,34 @@
     }
 
     // ===================================================================
-    // INFINITE SCROLL & TIMELINE AUTO-EXPANSION
+    // INFINITE SCROLL, LIFECYCLE VISUAL SYNC & TIMELINE AUTO-EXPANSION
     // ===================================================================
-    gantt.attachEvent("onAfterTaskAdd", () => { scheduleSave(); renderFullGridLines(); updateTodayMarker(); });
-    gantt.attachEvent("onAfterTaskUpdate", () => scheduleSave());
-    gantt.attachEvent("onAfterTaskDelete", () => { scheduleSave(); renderFullGridLines(); updateTodayMarker(); });
-    gantt.attachEvent("onAfterTaskMove", () => scheduleSave());
+    gantt.attachEvent("onTaskCreated", () => { updateEmptyState(); return true; });
+    gantt.attachEvent("onLightbox", () => { updateEmptyState(); });
+    gantt.attachEvent("onAfterLightbox", () => {
+        setTimeout(() => {
+            updateEmptyState();
+            queueVisualRefresh();
+        }, 0);
+    });
+    gantt.attachEvent("onAfterTaskAdd", () => {
+        updateEmptyState();
+        queueVisualRefresh();
+        scheduleSave();
+    });
+    gantt.attachEvent("onAfterTaskUpdate", () => {
+        queueVisualRefresh();
+        scheduleSave();
+    });
+    gantt.attachEvent("onAfterTaskDelete", () => {
+        updateEmptyState();
+        queueVisualRefresh();
+        scheduleSave();
+    });
+    gantt.attachEvent("onAfterTaskMove", () => {
+        queueVisualRefresh();
+        scheduleSave();
+    });
 
     // Read-only guards
     gantt.attachEvent("onBeforeLightbox", () => !isLocked);
@@ -2813,8 +2872,7 @@
         return true;
     });
 
-    // Save grid width when resized horizontally
-    gantt.attachEvent("onGridResizeEnd", function(old_width, new_width) {
+    gantt.attachEvent("onGridResizeEnd", function() {
         scheduleSave();
         return true;
     });
@@ -2851,6 +2909,7 @@
                 setTimeout(() => { isExpandingTimeline = false; }, 100);
             }
         }
+        queueVisualRefresh();
         scheduleSave();
     });
 
@@ -2941,7 +3000,7 @@
     });
 
     // ===================================================================
-    // EXPORT TO CSV
+    // EXPORT TO CSV & JSON
     // ===================================================================
     function exportCSV() {
         const tasks = gantt.getTaskByTime();
@@ -2998,6 +3057,7 @@
                 initTimelineDateRange(new Date());
                 gantt.parse(parsed);
                 rebuildAllLinkStyles();
+                gantt.render();
                 renderFullGridLines();
                 updateTodayMarker();
                 updateEmptyState();
@@ -3025,7 +3085,6 @@
         if (typeof menu.getBoundingClientRect !== 'function') return;
 
         const rect = menu.getBoundingClientRect();
-        // Check horizontal overflow against left/right viewport boundaries
         if (rect.left < 8) {
             menu.style.left = '0';
             menu.style.right = 'auto';
@@ -3037,7 +3096,6 @@
                 menu.style.left = 'auto';
             }
         }
-        // Check vertical bottom overflow: flip upwards if closer to bottom
         if (typeof window !== 'undefined' && window.innerHeight) {
             const currentRect = menu.getBoundingClientRect();
             if (currentRect.bottom > window.innerHeight - 8) {
@@ -3107,7 +3165,7 @@
         }
     });
 
-        // ===================================================================
+    // ===================================================================
     // CONTEXT MENU (DESKTOP RIGHT-CLICK & MOBILE LONG-PRESS)
     // ===================================================================
     let activeContextTaskId = null;
@@ -3203,7 +3261,6 @@
         const ganttContainer = document.getElementById('gantt_here');
         if (!ganttContainer) return;
 
-        // Desktop right-click
         ganttContainer.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             const taskId = getTaskIdFromPointerEvent(e);
@@ -3211,7 +3268,6 @@
             showContextMenu(e.clientX, e.clientY, taskId, clickDate);
         });
 
-        // Mobile touch-and-hold (long-press ~400ms with 8px movement threshold)
         let touchTimer = null;
         let touchStartX = 0;
         let touchStartY = 0;
@@ -3269,7 +3325,7 @@
             }
         });
 
-        ganttContainer.addEventListener('touchcancel', function(e) {
+        ganttContainer.addEventListener('touchcancel', function() {
             if (touchTimer) {
                 clearTimeout(touchTimer);
                 touchTimer = null;
@@ -3277,7 +3333,6 @@
             longPressFired = false;
         });
 
-        // Context Menu Item Actions
         const ctxEditTask = document.getElementById('ctxEditTask');
         if (ctxEditTask) {
             ctxEditTask.addEventListener('click', function() {
@@ -3302,7 +3357,7 @@
                 const parentTask = (typeof gantt.getTask === 'function' && gantt.isTaskExists(parentId)) ? gantt.getTask(parentId) : null;
                 const id = (typeof gantt.uid === 'function') ? gantt.uid() : Date.now();
                 const startDate = (parentTask && parentTask.start_date) ? new Date(parentTask.start_date) : new Date();
-                gantt.createTask({
+                const createdId = gantt.createTask({
                     id: id,
                     text: 'New Subtask',
                     start_date: startDate,
@@ -3314,7 +3369,10 @@
                     textColor: getThemeColor('text')
                 }, parentId);
                 if (typeof gantt.open === 'function') gantt.open(parentId);
-                if (typeof gantt.showLightbox === 'function') gantt.showLightbox(id);
+                if (createdId && !(gantt.getState && gantt.getState().lightbox) && typeof gantt.showLightbox === 'function') {
+                    gantt.showLightbox(createdId);
+                }
+                updateEmptyState();
             });
         }
 
@@ -3333,13 +3391,18 @@
                 if (task.type === 'milestone') {
                     task.type = 'task';
                     task.duration = Math.max(task.duration || 1, 1);
+                    if (typeof gantt.calculateEndDate === 'function') {
+                        task.end_date = gantt.calculateEndDate(task);
+                    }
                     task.color = getThemeColor('task');
                 } else {
                     task.type = 'milestone';
                     task.duration = 0;
+                    if (task.start_date) task.end_date = new Date(task.start_date);
                     task.color = getThemeColor('milestone');
                 }
                 if (typeof gantt.updateTask === 'function') gantt.updateTask(id);
+                queueVisualRefresh();
                 scheduleSave();
                 showToast('Toggled "' + (task.text || 'Task') + '" to ' + task.type);
             });
@@ -3356,6 +3419,7 @@
                 }
                 if (id && typeof gantt !== 'undefined' && gantt.isTaskExists(id)) {
                     gantt.deleteTask(id);
+                    queueVisualRefresh();
                     scheduleSave();
                 }
             });
@@ -3394,7 +3458,6 @@
             });
         }
 
-        // Dismissal handlers
         document.addEventListener('click', function(e) {
             const menu = document.getElementById('customContextMenu');
             if (menu && menu.style.display !== 'none' && !e.target.closest('#customContextMenu')) {
@@ -3466,6 +3529,7 @@
             if (selectedId && gantt.isTaskExists(selectedId)) {
                 e.preventDefault();
                 gantt.deleteTask(selectedId);
+                queueVisualRefresh();
             }
             return;
         }
@@ -3629,7 +3693,6 @@
                 searchInput.value = currentSearch;
             }
 
-            // Restore wide timeline boundaries so panning is immediately active
             if (saved.startDate && saved.endDate) {
                 const curLvl = zoomLevels[currentZoomIndex] || zoomLevels[4];
                 const win = getTimelineWindow(saved.startDate, curLvl);
@@ -3669,11 +3732,10 @@
             return;
         }
 
-        // Fresh Start: ensure wide date span and render Today line immediately
         initTimelineDateRange(new Date());
         gantt.render();
         updateTodayMarker();
-        updateEmptyState(); // Show immediately on initial load
+        updateEmptyState();
 
         fetch('gantt_data.json')
             .then(r => r.ok ? r.json() : null)
