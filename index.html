@@ -1694,20 +1694,77 @@
             alert('Diagram is locked in read-only mode. Please unlock it first.');
             return;
         }
-        if (confirm('Clear entire diagram and reset workspace?')) {
+        if (!confirm('Clear entire diagram and reset workspace?')) return;
+
+        // Laufende Auto-Save-/Scroll-Timer abbrechen
+        clearTimeout(saveTimeout);
+        clearTimeout(scrollSaveTimer);
+        clearTimeout(scrollExpandTimer);
+
+        isHistoryOperating = true;
+        isExpandingTimeline = true;
+
+        // Alle Tasks, Links und dynamischen Link-Styles entfernen
+        gantt.clearAll();
+        rebuildAllLinkStyles();
+
+        // File-Input zurücksetzen (damit dieselbe Datei später wieder importiert werden kann)
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.value = '';
+
+        // Suche zurücksetzen
+        currentSearch = "";
+        if (searchInput) searchInput.value = "";
+        if (searchClear) searchClear.style.display = "none";
+        if (searchBadge) searchBadge.style.display = "none";
+
+        // Snap, Lock & Grid zurücksetzen
+        snapEnabled = false;
+        applyMagnetismState();
+        updateMagnetBtn();
+
+        isLocked = false;
+        applyLockState();
+
+        gantt.config.show_grid = true;
+        gantt.config.grid_width = isSmallScreen ? 260 : 400;
+        updateGridToggleBtn();
+
+        // Zoom auf Standard ("month", Index 4) zurücksetzen
+        currentZoomIndex = 4;
+        const defaultLevel = zoomLevels[currentZoomIndex];
+        gantt.config.scales = defaultLevel.scales;
+        gantt.config.min_column_width = defaultLevel.min_column_width;
+        gantt.config.scale_height = defaultLevel.scale_height;
+        gantt.config.time_step = defaultLevel.time_step || 60;
+        activeRowHeight = defaultLevel.row_height;
+        gantt.config.row_height = activeRowHeight;
+        document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
+        updateZoomLabel();
+
+        // Gespeicherten Zustand & Theme aus localStorage entfernen
+        try {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem('igev_theme');
-            location.reload();
-        }
-    }
+        } catch (e) {}
+        setTheme('light');
 
-    function scheduleSave() {
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(() => {
-            saveStateToStorage(true);
-            recordHistory();
-            updateEmptyState();
-        }, 500);
+        // Timeline neu auf "Heute" zentrieren & Willkommensmenü anzeigen
+        initTimelineDateRange(new Date());
+        gantt.render();
+        renderFullGridLines();
+        updateTodayMarker();
+        showToday();
+        updateEmptyState();
+
+        // Undo/Redo-Verlauf leeren
+        historyStack.length = 0;
+        historyPointer = -1;
+        isHistoryOperating = false;
+        recordHistory();
+
+        setTimeout(() => { isExpandingTimeline = false; }, 120);
+        showSaveIndicator("🗑️ Workspace reset");
     }
 
     // ===================================================================
