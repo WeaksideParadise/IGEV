@@ -36,7 +36,7 @@ Traditional project management tools (Jira, MS Project, Monday, Asana) are often
 
 ### 1. One HTML File · Zero Backend · Git-Committable
 <p align="center">
-  <img src="assets/zero-backend-git-committable.jpg" alt="One HTML File, Zero Backend, Git-Committable" width="85%" />
+  <img src="assets/zero-backend-git-committable.gif" alt="One HTML File, Zero Backend, Git-Committable" width="85%" />
 </p>
 
 * **No Build Step Required**: No Node.js installation, no Webpack/Vite, no dependencies to manage. Just double-click [index.html](file:///e:/Uni/TUC/Privat/Project%20Roadmap/index.html).
@@ -47,7 +47,7 @@ Traditional project management tools (Jira, MS Project, Monday, Asana) are often
 
 ### 2. Intuitive Timeline & Drag-and-Drop Scheduling
 <p align="center">
-  <img src="assets/timeline-drag-and-drop.jpg" alt="Timeline & Drag-and-Drop" width="85%" />
+  <img src="assets/timeline-drag-and-drop.gif" alt="Timeline & Drag-and-Drop" width="85%" />
 </p>
 
 * **Frictionless Scheduling**: Drag and drop tasks across dates effortlessly using mouse or touch.
@@ -58,7 +58,7 @@ Traditional project management tools (Jira, MS Project, Monday, Asana) are often
 
 ### 3. Precise Duration Resizing & Task Management
 <p align="center">
-  <img src="assets/timeline-resize.jpg" alt="Timeline Resizing" width="85%" />
+  <img src="assets/timeline-resize.gif" alt="Timeline Resizing" width="85%" />
 </p>
 
 * **Direct Edge Resizing**: Adjust task duration instantly by dragging boundary grab handles.
@@ -69,7 +69,7 @@ Traditional project management tools (Jira, MS Project, Monday, Asana) are often
 
 ### 4. All 4 Industrial Dependency Types
 <p align="center">
-  <img src="assets/dependency-types.jpg" alt="4 Dependency Types" width="85%" />
+  <img src="assets/dependency-types.gif" alt="4 Dependency Types" width="85%" />
 </p>
 
 Real-world project planning requires versatile dependencies. IGEV supports all 4 standard link relationships:
