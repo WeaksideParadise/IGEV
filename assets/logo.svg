@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1224"/>
+      <stop offset="100%" stop-color="#04070e"/>
+    </linearGradient>
+    <linearGradient id="logoCyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#00e5ff"/>
+    </linearGradient>
+    <linearGradient id="logoEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="logoAmberGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="logoMagentaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7597"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Base with Subtle Border -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#logoBgGrad)" stroke="#1e2c47" stroke-width="2"/>
+
+  <!-- Vertical Timeline Axis Grid Guides -->
+  <line x1="20" y1="11" x2="20" y2="53" stroke="#16233b" stroke-width="1.5" stroke-dasharray="2 3"/>
+  <line x1="34" y1="11" x2="34" y2="53" stroke="#16233b" stroke-width="1.5" stroke-dasharray="2 3"/>
+  <line x1="48" y1="11" x2="48" y2="53" stroke="#16233b" stroke-width="1.5" stroke-dasharray="2 3"/>
+
+  <!-- Dependency Link: Task 1 (Cyan) -> Task 2 (Emerald) -->
+  <path d="M 33 20.5 H 39 V 29.5 H 28" fill="none" stroke="#ffb648" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Dependency Link: Task 2 (Emerald) -> Milestone -->
+  <path d="M 47 34 V 46.5 H 45" fill="none" stroke="#ff5c86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Dependency Link: Task 3 (Amber) -> Milestone -->
+  <line x1="29" y1="46.5" x2="38" y2="46.5" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Gantt Task Bar 1 (Cyan) -->
+  <rect x="13" y="16" width="20" height="9" rx="4.5" fill="url(#logoCyanGrad)"/>
+
+  <!-- Gantt Task Bar 2 (Emerald) -->
+  <rect x="25" y="29.5" width="22" height="9" rx="4.5" fill="url(#logoEmeraldGrad)"/>
+
+  <!-- Gantt Task Bar 3 (Amber) -->
+  <rect x="13" y="42" width="16" height="9" rx="4.5" fill="url(#logoAmberGrad)"/>
+
+  <!-- Milestone Diamond (Magenta) -->
+  <polygon points="44,40.5 50,46.5 44,52.5 38,46.5" fill="url(#logoMagentaGrad)" stroke="#ffe4ec" stroke-width="1"/>
+</svg>
