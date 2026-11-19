@@ -148,6 +148,7 @@ function createContextMenuTestEnv() {
     showToday: () => {},
     toggleLock: () => {},
     closeAllDropdowns: () => {},
+    queueVisualRefresh: () => {},
     updateUndoRedoUI: () => {},
     isLocked: false,
     gantt: {

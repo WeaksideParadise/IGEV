@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IGEV — Intuitive Gantt Editor & Viewer</title>
 
+    <!-- Favicon & Branding -->
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/favicon.svg">
+    <meta name="theme-color" content="#04070e">
+
+    <!-- Primary SEO Metadata -->
+    <meta name="description" content="IGEV is a lightweight, zero-backend Gantt chart editor and roadmap planner in a single HTML file. Drag-and-drop scheduling, Git-committable, 100% offline.">
+    <meta name="keywords" content="Gantt, Roadmap, Project Management, Timeline, Planner, HTML, Local-First, Offline">
+    <meta name="author" content="Markus Meier">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="IGEV — Intuitive Gantt Editor & Viewer">
+    <meta property="og:description" content="The lightweight, zero-backend Gantt chart editor and roadmap planner in a single HTML file.">
+    <meta property="og:image" content="assets/favicon.svg">
+
     <script src="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/dhtmlx-gantt@8.0.6/codebase/dhtmlxgantt.css" rel="stylesheet">
 
@@ -275,6 +291,15 @@
         }
 
         .brand-area { display: flex; align-items: center; gap: 10px; }
+        .brand-logo {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            display: inline-block;
+            vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
         .controls h2 {
             margin: 0; font-size: 1.15rem; color: var(--text);
             font-family: var(--font-display);
@@ -1336,6 +1361,7 @@
 
 <div class="controls">
     <div class="brand-area">
+        <img src="assets/favicon.svg" alt="IGEV Logo" class="brand-logo" width="26" height="26">
         <h2>IGEV <span class="badge-version">v2.5</span></h2>
         <div class="search-container">
             <input type="text" id="globalSearchInput" class="search-input" placeholder="🔍 Search tasks..." autocomplete="off">
