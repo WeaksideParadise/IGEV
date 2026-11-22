@@ -7,7 +7,9 @@
     "build": "echo \"No build step required for static site\"",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "preview": "wrangler preview"
+    "preview": "wrangler preview",
+    "feedback-server": "node scripts/feedback-server.js",
+    "test": "node tests/full_verification_suite.js"
   },
   "devDependencies": {
     "wrangler": "^4.86.0"

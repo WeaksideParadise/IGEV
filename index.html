@@ -1228,13 +1228,59 @@
             font-size: 0.75rem;
             letter-spacing: 0.05em;
         }
-        .modal-row input, .modal-row select {
+        .modal-row input, .modal-row select, .modal-row textarea {
             width: 100%; padding: 8px 10px;
             background: var(--bg-raised);
             color: var(--text);
             border: 1px solid var(--border); border-radius: 4px;
             box-sizing: border-box;
             font-family: var(--font-body);
+        }
+        .modal-row textarea {
+            min-height: 110px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+        .feedback-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .feedback-checkbox-row input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+        .feedback-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        .feedback-status {
+            display: none;
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            line-height: 1.4;
+        }
+        .feedback-status.show { display: block; }
+        .feedback-status.error {
+            background: rgba(255, 92, 134, 0.14);
+            border: 1px solid rgba(255, 92, 134, 0.4);
+            color: var(--text);
+        }
+        .feedback-status.success {
+            background: rgba(123, 240, 164, 0.14);
+            border: 1px solid rgba(123, 240, 164, 0.4);
+            color: var(--text);
         }
         .modal-buttons { display: flex; gap: 8px; margin-top: 20px; }
         .modal-buttons button { flex: 1; justify-content: center; }
@@ -1407,6 +1453,7 @@
                 </div>
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-item" onclick="openShortcutsModal()">❓ Help & Shortcuts</button>
+                <button class="dropdown-item" id="feedbackMenuBtn" onclick="openFeedbackModal()">💬 Send Feedback</button>
                 <a href="https://weaksideparadise.me" target="_blank" rel="noopener noreferrer" class="dropdown-item about-avatar-btn" title="Markus Meier — Developer & Portfolio (weaksideparadise.me)">
                     <img src="https://weaksideparadise.me/assets/char_highres.png" alt="Markus Meier" class="about-avatar" width="20" height="20" loading="lazy">
                     <span class="about-text">About Me ↗</span>
@@ -1544,6 +1591,34 @@
 
         <div class="modal-buttons">
             <button class="primary-btn" onclick="closeShortcutsModal()">Got it</button>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedbackModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="feedbackModalTitle">
+    <div class="modal-card" style="width: 480px; max-width: 94vw;">
+        <h3 id="feedbackModalTitle">Send Feedback</h3>
+        <div class="modal-row">
+            <label for="feedbackMessage">Message *</label>
+            <textarea id="feedbackMessage" maxlength="20000" placeholder="Describe a bug, idea, or question (3–20,000 characters)..."></textarea>
+            <div class="feedback-meta-row">
+                <span>Local-only until submitted</span>
+                <span id="feedbackCharCount">0 / 20,000</span>
+            </div>
+        </div>
+        <div class="modal-row">
+            <label for="feedbackEmail">Contact Email (optional)</label>
+            <input type="email" id="feedbackEmail" maxlength="320" placeholder="you@example.com">
+        </div>
+        <label class="feedback-checkbox-row" for="feedbackAttachDiag">
+            <input type="checkbox" id="feedbackAttachDiag" checked>
+            <span>Attach session diagnostics snapshot (max 256 KB, no secrets)</span>
+        </label>
+        <div id="feedbackStatus" class="feedback-status" role="status" aria-live="polite"></div>
+        <div class="modal-buttons">
+            <button id="feedbackSubmitBtn" class="primary-btn" onclick="submitFeedback()">📨 Send Feedback</button>
+            <button class="secondary" onclick="closeFeedbackModal()">Cancel</button>
         </div>
     </div>
 </div>
@@ -3513,10 +3588,302 @@
         if (e.target.id === 'shortcutsModal') closeShortcutsModal();
     });
 
+    // ===================================================================
+    // DIAGNOSTICS RING BUFFER & FEEDBACK DIALOG
+    // ===================================================================
+    const FEEDBACK_APP_VERSION = '1.0.0';
+    const FEEDBACK_MAX_MESSAGE = 20000;
+    const FEEDBACK_MIN_MESSAGE = 3;
+    const FEEDBACK_MAX_EMAIL = 320;
+    const FEEDBACK_MAX_DIAG_BYTES = 256 * 1024;
+    const DIAG_RING_MAX = 4000;
+
+    const IGEVDiagnostics = (function() {
+        const buffer = [];
+        let lastSnapshot = null;
+
+        function push(kind, label, detail) {
+            if (buffer.length >= DIAG_RING_MAX) {
+                buffer.shift();
+            }
+            const entry = {
+                t: Date.now(),
+                kind: kind === 'error' || kind === 'info' ? kind : 'action',
+                label: String(label || '').slice(0, 120)
+            };
+            if (detail !== undefined && detail !== null) {
+                entry.detail = typeof detail === 'string' ? detail.slice(0, 500) : detail;
+            }
+            buffer.push(entry);
+            return entry;
+        }
+
+        function captureLightweightSnapshot() {
+            let taskCount = 0;
+            let linkCount = 0;
+            let selectedTask = null;
+            try {
+                if (typeof gantt !== 'undefined' && typeof gantt.getTaskCount === 'function') {
+                    taskCount = gantt.getTaskCount();
+                }
+                if (typeof gantt !== 'undefined' && typeof gantt.getLinks === 'function') {
+                    linkCount = gantt.getLinks().length;
+                }
+                if (typeof gantt !== 'undefined' && typeof gantt.getSelectedId === 'function') {
+                    selectedTask = gantt.getSelectedId() || null;
+                }
+            } catch (_) {}
+
+            return {
+                taskCount,
+                linkCount,
+                selectedTask,
+                historyLength: typeof historyStack !== 'undefined' ? historyStack.length : 0,
+                historyPointer: typeof historyPointer !== 'undefined' ? historyPointer : -1,
+                theme: (typeof document !== 'undefined' && document.documentElement)
+                    ? (document.documentElement.getAttribute('data-theme') || 'light')
+                    : 'light',
+                isLocked: typeof isLocked !== 'undefined' ? !!isLocked : false,
+                snapEnabled: typeof snapEnabled !== 'undefined' ? !!snapEnabled : false
+            };
+        }
+
+        function recordStateDiff(label) {
+            const next = captureLightweightSnapshot();
+            if (!lastSnapshot) {
+                lastSnapshot = next;
+                push('info', label || 'init', next);
+                return;
+            }
+            const diff = {};
+            for (const key of Object.keys(next)) {
+                if (next[key] !== lastSnapshot[key]) {
+                    diff[key] = next[key];
+                }
+            }
+            lastSnapshot = next;
+            if (Object.keys(diff).length > 0 || label) {
+                push('action', label || 'state_change', diff);
+            }
+        }
+
+        function dumpDiagnostics() {
+            const snap = captureLightweightSnapshot();
+            return {
+                app: 'IGEV',
+                appVersion: FEEDBACK_APP_VERSION,
+                capturedAt: new Date().toISOString(),
+                environment: {
+                    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+                    viewport: typeof window !== 'undefined'
+                        ? { width: window.innerWidth, height: window.innerHeight }
+                        : null,
+                    protocol: typeof window !== 'undefined' && window.location ? window.location.protocol : 'unknown'
+                },
+                state: snap,
+                logCount: buffer.length,
+                logs: buffer.slice()
+            };
+        }
+
+        function truncateDiagnostics(diagObj, maxBytes = FEEDBACK_MAX_DIAG_BYTES) {
+            let serialized = JSON.stringify(diagObj);
+            if (serialized.length <= maxBytes) {
+                return serialized;
+            }
+            const trimmed = Object.assign({}, diagObj, {
+                truncated: true,
+                logs: Array.isArray(diagObj.logs) ? diagObj.logs.slice(-200) : []
+            });
+            serialized = JSON.stringify(trimmed);
+            if (serialized.length <= maxBytes) {
+                return serialized;
+            }
+            return serialized.slice(0, maxBytes);
+        }
+
+        function attachHooks() {
+            if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+                window.addEventListener('error', function(ev) {
+                    push('error', 'window.onerror', {
+                        message: ev && ev.message ? String(ev.message).slice(0, 300) : 'Unknown error',
+                        line: ev && ev.lineno ? ev.lineno : 0
+                    });
+                });
+                window.addEventListener('unhandledrejection', function(ev) {
+                    const reason = ev && ev.reason
+                        ? (ev.reason.message || String(ev.reason)).slice(0, 300)
+                        : 'Unhandled rejection';
+                    push('error', 'unhandledrejection', { reason });
+                });
+            }
+            if (typeof gantt !== 'undefined' && typeof gantt.attachEvent === 'function') {
+                gantt.attachEvent('onAfterTaskAdd', function() { recordStateDiff('task_add'); });
+                gantt.attachEvent('onAfterTaskUpdate', function() { recordStateDiff('task_update'); });
+                gantt.attachEvent('onAfterTaskDelete', function() { recordStateDiff('task_delete'); });
+                gantt.attachEvent('onAfterLinkAdd', function() { recordStateDiff('link_add'); });
+                gantt.attachEvent('onAfterLinkDelete', function() { recordStateDiff('link_delete'); });
+                gantt.attachEvent('onTaskSelected', function() { recordStateDiff('task_select'); });
+            }
+            recordStateDiff('session_start');
+        }
+
+        return {
+            push,
+            recordStateDiff,
+            dumpDiagnostics,
+            truncateDiagnostics,
+            attachHooks,
+            getBuffer: () => buffer
+        };
+    })();
+
+    if (typeof window !== 'undefined') {
+        window.igevDiagnostics = () => IGEVDiagnostics.dumpDiagnostics();
+        IGEVDiagnostics.attachHooks();
+    }
+
+    function setFeedbackStatus(text, type) {
+        const el = document.getElementById('feedbackStatus');
+        if (!el) return;
+        if (!text) {
+            el.textContent = '';
+            el.className = 'feedback-status';
+            return;
+        }
+        el.textContent = text;
+        el.className = 'feedback-status show ' + (type === 'error' ? 'error' : 'success');
+    }
+
+    function updateFeedbackCharCount() {
+        const msgEl = document.getElementById('feedbackMessage');
+        const countEl = document.getElementById('feedbackCharCount');
+        if (!msgEl || !countEl) return;
+        countEl.textContent = `${msgEl.value.length.toLocaleString()} / 20,000`;
+    }
+
+    function openFeedbackModal() {
+        if (typeof closeAllDropdowns === 'function') closeAllDropdowns();
+        const modal = document.getElementById('feedbackModal');
+        if (!modal) return;
+        setFeedbackStatus('', '');
+        updateFeedbackCharCount();
+        modal.classList.add('show');
+        const msgEl = document.getElementById('feedbackMessage');
+        if (msgEl) msgEl.focus();
+    }
+
+    function closeFeedbackModal() {
+        const modal = document.getElementById('feedbackModal');
+        if (modal) modal.classList.remove('show');
+    }
+
+    function downloadFeedbackJson(payload) {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'igev-feedback.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function submitFeedback() {
+        const msgEl = document.getElementById('feedbackMessage');
+        const emailEl = document.getElementById('feedbackEmail');
+        const attachEl = document.getElementById('feedbackAttachDiag');
+        const submitBtn = document.getElementById('feedbackSubmitBtn');
+
+        const message = msgEl ? msgEl.value.trim() : '';
+        const email = emailEl ? emailEl.value.trim() : '';
+        const attachDiag = attachEl ? !!attachEl.checked : true;
+
+        if (message.length < FEEDBACK_MIN_MESSAGE || message.length > FEEDBACK_MAX_MESSAGE) {
+            setFeedbackStatus(`Please enter between ${FEEDBACK_MIN_MESSAGE} and ${FEEDBACK_MAX_MESSAGE.toLocaleString()} characters.`, 'error');
+            return;
+        }
+        if (email.length > FEEDBACK_MAX_EMAIL) {
+            setFeedbackStatus(`Contact email must be at most ${FEEDBACK_MAX_EMAIL} characters.`, 'error');
+            return;
+        }
+
+        const payload = {
+            message,
+            email: email || undefined,
+            appVersion: FEEDBACK_APP_VERSION,
+            diagnostics: attachDiag ? IGEVDiagnostics.truncateDiagnostics(IGEVDiagnostics.dumpDiagnostics()) : undefined
+        };
+
+        const isStatic = (typeof window !== 'undefined') && (
+            window.IGEV_STATIC === true ||
+            (window.location && window.location.protocol === 'file:')
+        );
+
+        if (isStatic) {
+            downloadFeedbackJson(payload);
+            setFeedbackStatus('Offline/static mode: downloaded igev-feedback.json so you can send it manually.', 'success');
+            if (msgEl) msgEl.value = '';
+            updateFeedbackCharCount();
+            return;
+        }
+
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+            const resp = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (resp.ok) {
+                setFeedbackStatus('Thank you! Your feedback has been submitted.', 'success');
+                if (msgEl) msgEl.value = '';
+                updateFeedbackCharCount();
+                return;
+            }
+
+            if (resp.status === 404 || resp.status === 405) {
+                downloadFeedbackJson(payload);
+                setFeedbackStatus('Static host detected: downloaded igev-feedback.json so you can send it manually.', 'success');
+                if (msgEl) msgEl.value = '';
+                updateFeedbackCharCount();
+                return;
+            }
+
+            let errMsg = `Submission failed (HTTP ${resp.status}).`;
+            try {
+                const errJson = await resp.json();
+                if (errJson && errJson.error) errMsg = errJson.error;
+            } catch (_) {}
+            setFeedbackStatus(errMsg, 'error');
+        } catch (_) {
+            downloadFeedbackJson(payload);
+            setFeedbackStatus('Server unreachable: downloaded igev-feedback.json so you can send it manually.', 'success');
+            if (msgEl) msgEl.value = '';
+            updateFeedbackCharCount();
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+
+    const feedbackModalEl = document.getElementById('feedbackModal');
+    if (feedbackModalEl) {
+        feedbackModalEl.addEventListener('click', function(e) {
+            if (e.target.id === 'feedbackModal') closeFeedbackModal();
+        });
+    }
+    const feedbackMsgInput = document.getElementById('feedbackMessage');
+    if (feedbackMsgInput) {
+        feedbackMsgInput.addEventListener('input', updateFeedbackCharCount);
+    }
+
     window.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeAllDropdowns();
             closeShortcutsModal();
+            closeFeedbackModal();
             hideContextMenu();
             return;
         }
