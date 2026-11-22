@@ -1782,6 +1782,7 @@
                 timestamp: Date.now(),
                 data: gantt.serialize(),
                 zoomIndex: currentZoomIndex,
+                pxPerDay: currentPxPerDay,
                 activeRowHeight: activeRowHeight,
                 showGrid: gantt.config.show_grid,
                 gridWidth: gantt.config.grid_width,
@@ -1853,6 +1854,7 @@
 
         currentZoomIndex = 4;
         const defaultLevel = zoomLevels[currentZoomIndex];
+        currentPxPerDay = defaultLevel.min_column_width / defaultLevel.unitDays;
         gantt.config.scales = defaultLevel.scales;
         gantt.config.min_column_width = defaultLevel.min_column_width;
         gantt.config.scale_height = defaultLevel.scale_height;
@@ -2008,7 +2010,7 @@
     gantt.config.autoscroll_speed = 25;
 
     // ===================================================================
-    // ZOOM TIERS & TIMELINE SPAN BUFFER (MINUTE TO DECADE LEVEL)
+    // CONTINUOUS SEAMLESS ZOOM TIERS & TIMELINE SPAN BUFFER
     // ===================================================================
     const zoomLevels = [
         {
@@ -2016,6 +2018,8 @@
             scale_height: 50,
             row_height: 28,
             min_column_width: 50,
+            minColPx: 36,
+            unitDays: 730.5,
             scales: [
                 { unit: "year", step: 10, format: (d) => { const y = Math.floor(d.getFullYear() / 10) * 10; return y + "s"; } },
                 { unit: "year", step: 2, format: "%Y" }
@@ -2029,6 +2033,8 @@
             scale_height: 50,
             row_height: 28,
             min_column_width: 45,
+            minColPx: 45,
+            unitDays: 365.25,
             scales: [
                 { unit: "year", step: 5, format: (d) => { const y = Math.floor(d.getFullYear() / 5) * 5; return y + " – " + (y + 4); } },
                 { unit: "year", step: 1, format: "%Y" }
@@ -2042,6 +2048,8 @@
             scale_height: 50,
             row_height: 28,
             min_column_width: 35,
+            minColPx: 35,
+            unitDays: 91.3125,
             scales: [
                 { unit: "year", step: 1, format: "%Y" },
                 { unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1) }
@@ -2054,10 +2062,12 @@
             name: "quarter",
             scale_height: 50,
             row_height: 32,
-            min_column_width: 85,
+            min_column_width: 56,
+            minColPx: 42,
+            unitDays: 30.4375,
             scales: [
                 { unit: "year", step: 1, format: "%Y" },
-                { unit: "quarter", step: 1, format: (d) => "Q" + (Math.floor(d.getMonth() / 3) + 1) }
+                { unit: "month", step: 1, format: "%M" }
             ],
             time_step: 60,
             pad: { unit: "year", before: 3, after: 4 },
@@ -2068,6 +2078,8 @@
             scale_height: 50,
             row_height: 35,
             min_column_width: 110,
+            minColPx: 42,
+            unitDays: 7,
             scales: [
                 { unit: "month", format: "%F, %Y" },
                 { unit: "week", format: "W%W" }
@@ -2081,9 +2093,11 @@
             scale_height: 50,
             row_height: 42,
             min_column_width: 48,
+            minColPx: 42,
+            unitDays: 2,
             scales: [
                 { unit: "month", format: "%M %Y" },
-                { unit: "day", step: 1, format: "%d %D" }
+                { unit: "day", step: 2, format: "%d %D" }
             ],
             time_step: 60,
             pad: { unit: "day", before: 40, after: 80 },
@@ -2094,6 +2108,8 @@
             scale_height: 50,
             row_height: 52,
             min_column_width: 75,
+            minColPx: 48,
+            unitDays: 1,
             scales: [
                 { unit: "month", format: "%M %Y" },
                 { unit: "day", step: 1, format: "%d %M" }
@@ -2103,10 +2119,27 @@
             expandStep: { unit: "day", amount: 15 }
         },
         {
+            name: "6-hour",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 48,
+            minColPx: 42,
+            unitDays: 0.25,
+            scales: [
+                { unit: "day", format: "%D, %d %M %Y" },
+                { unit: "hour", step: 6, format: "%H:00" }
+            ],
+            time_step: 30,
+            pad: { unit: "day", before: 12, after: 20 },
+            expandStep: { unit: "day", amount: 8 }
+        },
+        {
             name: "hour",
             scale_height: 50,
             row_height: 52,
             min_column_width: 42,
+            minColPx: 42,
+            unitDays: 1 / 24,
             scales: [
                 { unit: "day", format: "%D, %d %M %Y" },
                 { unit: "hour", step: 1, format: "%H:00" }
@@ -2120,6 +2153,8 @@
             scale_height: 50,
             row_height: 52,
             min_column_width: 45,
+            minColPx: 42,
+            unitDays: 1 / 96,
             scales: [
                 { unit: "day", format: "%D, %d %M %Y" },
                 { unit: "minute", step: 15, format: "%H:%i" }
@@ -2129,10 +2164,27 @@
             expandStep: { unit: "hour", amount: 12 }
         },
         {
+            name: "5-min",
+            scale_height: 50,
+            row_height: 52,
+            min_column_width: 45,
+            minColPx: 42,
+            unitDays: 1 / 288,
+            scales: [
+                { unit: "hour", format: "%H:00 — %d %M %Y" },
+                { unit: "minute", step: 5, format: "%H:%i" }
+            ],
+            time_step: 5,
+            pad: { unit: "hour", before: 18, after: 18 },
+            expandStep: { unit: "hour", amount: 6 }
+        },
+        {
             name: "minute",
             scale_height: 50,
             row_height: 52,
             min_column_width: 44,
+            minColPx: 42,
+            unitDays: 1 / 1440,
             scales: [
                 { unit: "hour", format: "%H:00 — %d %M %Y" },
                 { unit: "minute", step: 1, format: "%H:%i" }
@@ -2143,8 +2195,34 @@
         }
     ];
 
+    const MIN_PX_PER_DAY = 30 / 730.5;   // ~0.041 px/day (decade, 30px per 2-year col)
+    const MAX_PX_PER_DAY = 160 * 1440;   // 230400 px/day (minute, 160px per 1-min col)
+
     let currentZoomIndex = 4; // default "month"
+    let currentPxPerDay = zoomLevels[currentZoomIndex].min_column_width / zoomLevels[currentZoomIndex].unitDays;
     let activeRowHeight = zoomLevels[currentZoomIndex].row_height;
+
+    function resolveZoomForPxPerDay(pxPerDay) {
+        const clamped = Math.max(MIN_PX_PER_DAY, Math.min(MAX_PX_PER_DAY, pxPerDay));
+        let idx = 0;
+        for (let i = zoomLevels.length - 1; i >= 0; i--) {
+            if (clamped >= zoomLevels[i].minColPx / zoomLevels[i].unitDays) {
+                idx = i;
+                break;
+            }
+        }
+        const level = zoomLevels[idx];
+        const colWidth = Math.max(24, Math.round(clamped * level.unitDays));
+        return { index: idx, level, colWidth, pxPerDay: clamped };
+    }
+
+    function computeRowHeightForPxPerDay(pxPerDay) {
+        // Smoothly interpolate row height between 28px (year/decade) and 52px (day+)
+        const lo = Math.log(0.4);
+        const hi = Math.log(60);
+        const t = Math.max(0, Math.min(1, (Math.log(Math.max(0.01, pxPerDay)) - lo) / (hi - lo)));
+        return Math.round(28 + t * (52 - 28));
+    }
 
     function updateZoomLabel() {
         const labelEl = document.getElementById('zoomLabel');
@@ -2176,6 +2254,10 @@
                 start = new Date(d.getTime() - 6 * 3600 * 1000);
                 end = new Date(d.getTime() + 6 * 3600 * 1000);
                 break;
+            case "5-min":
+                start = new Date(d.getTime() - 18 * 3600 * 1000);
+                end = new Date(d.getTime() + 18 * 3600 * 1000);
+                break;
             case "15-min":
                 start = new Date(d.getTime() - 24 * 3600 * 1000);
                 end = new Date(d.getTime() + 24 * 3600 * 1000);
@@ -2183,6 +2265,10 @@
             case "hour":
                 start = new Date(d.getTime() - 4 * 24 * 3600 * 1000);
                 end = new Date(d.getTime() + 4 * 24 * 3600 * 1000);
+                break;
+            case "6-hour":
+                start = new Date(d.getTime() - 16 * 24 * 3600 * 1000);
+                end = new Date(d.getTime() + 16 * 24 * 3600 * 1000);
                 break;
             default:
                 return null;
@@ -2210,11 +2296,17 @@
         gantt.config.end_date = gantt.date.add(refMax, pad.after, pad.unit);
     }
 
-    function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
+    function applyContinuousZoom(targetPxPerDay, clientX, clientY, anchorInHeader, explicitAnchorDate) {
         if (!gantt.$task) return;
-        if (nextIndex < 0) nextIndex = 0;
-        if (nextIndex >= zoomLevels.length) nextIndex = zoomLevels.length - 1;
-        if (nextIndex === currentZoomIndex) return;
+        const resolved = resolveZoomForPxPerDay(targetPxPerDay);
+        const modeChanged = resolved.index !== currentZoomIndex;
+        const colChanged = resolved.colWidth !== gantt.config.min_column_width;
+        const nextRowHeight = anchorInHeader ? activeRowHeight : computeRowHeightForPxPerDay(resolved.pxPerDay);
+        const rowChanged = !anchorInHeader && nextRowHeight !== activeRowHeight;
+
+        if (!modeChanged && !colChanged && !rowChanged && Math.abs(resolved.pxPerDay - currentPxPerDay) < 1e-6) {
+            return;
+        }
 
         const taskRect = gantt.$task.getBoundingClientRect();
         const offsetX = clientX - taskRect.left;
@@ -2223,26 +2315,30 @@
         const absoluteX = state.x + offsetX;
         const absoluteY = state.y + offsetY;
 
-        const cursorDate = gantt.dateFromPos(absoluteX) || new Date();
+        const cursorDate = explicitAnchorDate || gantt.dateFromPos(absoluteX) || new Date();
         const cursorRowIndex = activeRowHeight > 0 ? absoluteY / activeRowHeight : 0;
 
-        const nextLevel = zoomLevels[nextIndex];
-        currentZoomIndex = nextIndex;
+        currentPxPerDay = resolved.pxPerDay;
+        currentZoomIndex = resolved.index;
 
-        gantt.config.scales = nextLevel.scales;
-        gantt.config.min_column_width = nextLevel.min_column_width;
-        gantt.config.scale_height = nextLevel.scale_height;
-        gantt.config.time_step = nextLevel.time_step || 60;
+        if (modeChanged) {
+            gantt.config.scales = resolved.level.scales;
+            gantt.config.scale_height = resolved.level.scale_height;
+            gantt.config.time_step = resolved.level.time_step || 60;
+        }
+        gantt.config.min_column_width = resolved.colWidth;
 
         if (anchorInHeader) {
             gantt.config.row_height = activeRowHeight;
-        } else {
-            activeRowHeight = nextLevel.row_height;
+        } else if (rowChanged) {
+            activeRowHeight = nextRowHeight;
             gantt.config.row_height = activeRowHeight;
             document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
         }
 
-        initTimelineDateRange(cursorDate);
+        if (modeChanged) {
+            initTimelineDateRange(cursorDate);
+        }
 
         isExpandingTimeline = true;
         gantt.render();
@@ -2257,6 +2353,16 @@
         gantt.scrollTo(Math.max(0, newScrollLeft), Math.max(0, newScrollTop));
         setTimeout(() => { isExpandingTimeline = false; }, 120);
         scheduleSave();
+    }
+
+    function applyZoom(nextIndex, clientX, clientY, anchorInHeader) {
+        if (!gantt.$task) return;
+        if (nextIndex < 0) nextIndex = 0;
+        if (nextIndex >= zoomLevels.length) nextIndex = zoomLevels.length - 1;
+        if (nextIndex === currentZoomIndex) return;
+        const nextLevel = zoomLevels[nextIndex];
+        const targetPxPerDay = nextLevel.min_column_width / nextLevel.unitDays;
+        applyContinuousZoom(targetPxPerDay, clientX, clientY, anchorInHeader);
     }
 
     // ===================================================================
@@ -3039,8 +3145,9 @@
         const currentLvl = zoomLevels[currentZoomIndex];
         const zoomName = (currentLvl && currentLvl.name) || "month";
         const isFine = ["minute", "15-min", "hour"].includes(zoomName);
+        const isStreamingWindow = isFine || ["5-min", "6-hour"].includes(zoomName);
 
-        if (isFine) {
+        if (isStreamingWindow) {
             const winDuration = curMaxDate.getTime() - curMinDate.getTime();
             const shiftMs = Math.round(winDuration / 2);
 
@@ -3943,10 +4050,23 @@
     });
 
     // ===================================================================
-    // ZOOM INTERACTION (WHEEL, TOUCH PINCH, BUTTONS)
+    // ZOOM INTERACTION (SMOOTH CONTINUOUS WHEEL, TOUCH PINCH, BUTTONS)
     // ===================================================================
     const container = document.getElementById("gantt_here");
-    let lastZoomTime = 0;
+    let pendingZoomRaf = null;
+    let pendingZoomReq = null;
+
+    function scheduleContinuousZoom(targetPxPerDay, clientX, clientY, anchorInHeader, explicitAnchorDate) {
+        pendingZoomReq = { targetPxPerDay, clientX, clientY, anchorInHeader, explicitAnchorDate };
+        if (pendingZoomRaf !== null) return;
+        pendingZoomRaf = requestAnimationFrame(() => {
+            pendingZoomRaf = null;
+            const req = pendingZoomReq;
+            pendingZoomReq = null;
+            if (!req) return;
+            applyContinuousZoom(req.targetPxPerDay, req.clientX, req.clientY, req.anchorInHeader, req.explicitAnchorDate);
+        });
+    }
 
     container.addEventListener('wheel', function(event) {
         const isGrid = event.target.closest(".gantt_grid") || event.target.closest(".gantt_grid_scale") || event.target.closest("#customGridSplitter");
@@ -3960,22 +4080,24 @@
             }
 
             if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-            if (Math.abs(event.deltaY) < 1) return;
+            if (Math.abs(event.deltaY) < 0.5) return;
 
             event.preventDefault();
             event.stopPropagation();
 
-            const now = Date.now();
-            if (now - lastZoomTime < 70) return;
-
             const taskRect = gantt.$task.getBoundingClientRect();
             const isHeader = (event.clientY - taskRect.top) < (gantt.config.scale_height || 50);
-            const nextIndex = event.deltaY < 0 ? currentZoomIndex + 1 : currentZoomIndex - 1;
 
-            if (nextIndex >= 0 && nextIndex < zoomLevels.length && nextIndex !== currentZoomIndex) {
-                lastZoomTime = now;
-                applyZoom(nextIndex, event.clientX, event.clientY, isHeader);
-            }
+            // Normalize wheel delta (line/page modes vs pixel trackpad)
+            let dy = event.deltaY;
+            if (event.deltaMode === 1) dy *= 16;
+            else if (event.deltaMode === 2) dy *= 120;
+            const clampedDy = Math.max(-140, Math.min(140, dy));
+            const factor = Math.exp(-clampedDy * 0.0024);
+
+            const basePx = pendingZoomReq ? pendingZoomReq.targetPxPerDay : currentPxPerDay;
+            const nextPx = Math.max(MIN_PX_PER_DAY, Math.min(MAX_PX_PER_DAY, basePx * factor));
+            scheduleContinuousZoom(nextPx, event.clientX, event.clientY, isHeader, null);
         }
     }, { passive: false, capture: true });
 
@@ -3985,7 +4107,19 @@
     }
     container.addEventListener('touchstart', function(e) {
         if (e.touches.length === 2 && e.target.closest('.gantt_task')) {
-            pinchState = { dist: getTouchDist(e.touches) };
+            const dist = getTouchDist(e.touches);
+            if (!dist) return;
+            const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const taskRect = gantt.$task.getBoundingClientRect();
+            const scrollState = gantt.getScrollState();
+            const anchorDate = gantt.dateFromPos(scrollState.x + (midX - taskRect.left)) || new Date();
+            pinchState = {
+                startDist: dist,
+                startPxPerDay: currentPxPerDay,
+                anchorDate: anchorDate,
+                anchorInHeader: (midY - taskRect.top) < (gantt.config.scale_height || 50)
+            };
         }
     }, { passive: true });
 
@@ -3993,36 +4127,30 @@
         if (!pinchState || e.touches.length !== 2) return;
         e.preventDefault();
         const dist = getTouchDist(e.touches);
-        if (!dist) return;
-        const ratio = dist / pinchState.dist;
+        if (!dist || !pinchState.startDist) return;
 
-        if (ratio > 1.25 || ratio < 0.8) {
-            const now = Date.now();
-            if (now - lastZoomTime > 180) {
-                lastZoomTime = now;
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                const target = currentZoomIndex + (ratio > 1 ? 1 : -1);
-                applyZoom(target, midX, midY, false);
-            }
-            pinchState.dist = dist;
-        }
+        const ratio = dist / pinchState.startDist;
+        const targetPx = Math.max(MIN_PX_PER_DAY, Math.min(MAX_PX_PER_DAY, pinchState.startPxPerDay * ratio));
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        scheduleContinuousZoom(targetPx, midX, midY, pinchState.anchorInHeader, pinchState.anchorDate);
     }, { passive: false });
 
-    container.addEventListener('touchend', () => { pinchState = null; }, { passive: true });
+    container.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) pinchState = null;
+    }, { passive: true });
+    container.addEventListener('touchcancel', () => { pinchState = null; }, { passive: true });
 
     function zoomStepFromUI(delta) {
-        const now = Date.now();
-        if (now - lastZoomTime < 80) return;
-        const target = currentZoomIndex + delta;
-        if (target < 0 || target >= zoomLevels.length || target === currentZoomIndex) return;
-
-        lastZoomTime = now;
+        const factor = delta > 0 ? 1.45 : (1 / 1.45);
         const taskRect = gantt.$task.getBoundingClientRect();
         const headerH = gantt.config.scale_height || 50;
         const midX = taskRect.left + taskRect.width / 2;
         const midY = taskRect.top + headerH + Math.max(0, (taskRect.height - headerH) / 2);
-        applyZoom(target, midX, midY, false);
+        const basePx = pendingZoomReq ? pendingZoomReq.targetPxPerDay : currentPxPerDay;
+        const targetPx = Math.max(MIN_PX_PER_DAY, Math.min(MAX_PX_PER_DAY, basePx * factor));
+        applyContinuousZoom(targetPx, midX, midY, false, null);
     }
 
     document.getElementById('zoomInBtn').addEventListener('click', () => zoomStepFromUI(1));
@@ -4042,27 +4170,38 @@
                 updateMagnetBtn();
             }
 
-            if (saved.zoomLevelName) {
-                const foundIdx = zoomLevels.findIndex(lvl => lvl.name === saved.zoomLevelName);
-                if (foundIdx !== -1) currentZoomIndex = foundIdx;
-                else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
-                    currentZoomIndex = saved.zoomIndex;
+            if (typeof saved.pxPerDay === 'number' && isFinite(saved.pxPerDay) && saved.pxPerDay > 0) {
+                const resolvedSaved = resolveZoomForPxPerDay(saved.pxPerDay);
+                currentZoomIndex = resolvedSaved.index;
+                currentPxPerDay = resolvedSaved.pxPerDay;
+            } else {
+                if (saved.zoomLevelName) {
+                    const foundIdx = zoomLevels.findIndex(lvl => lvl.name === saved.zoomLevelName);
+                    if (foundIdx !== -1) currentZoomIndex = foundIdx;
+                    else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
+                        currentZoomIndex = saved.zoomIndex;
+                    }
+                } else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
+                    const legacyNames = ["year", "quarter", "month", "week", "day"];
+                    if (saved.zoomIndex < legacyNames.length) {
+                        const matchIdx = zoomLevels.findIndex(lvl => lvl.name === legacyNames[saved.zoomIndex]);
+                        currentZoomIndex = (matchIdx !== -1) ? matchIdx : saved.zoomIndex;
+                    } else {
+                        currentZoomIndex = saved.zoomIndex;
+                    }
                 }
-            } else if (saved.zoomIndex !== undefined && saved.zoomIndex >= 0 && saved.zoomIndex < zoomLevels.length) {
-                const legacyNames = ["year", "quarter", "month", "week", "day"];
-                if (saved.zoomIndex < legacyNames.length) {
-                    const matchIdx = zoomLevels.findIndex(lvl => lvl.name === legacyNames[saved.zoomIndex]);
-                    currentZoomIndex = (matchIdx !== -1) ? matchIdx : saved.zoomIndex;
-                } else {
-                    currentZoomIndex = saved.zoomIndex;
-                }
+                const fallbackLevel = zoomLevels[currentZoomIndex] || zoomLevels[4];
+                currentPxPerDay = fallbackLevel.min_column_width / fallbackLevel.unitDays;
             }
-            const currentLevel = zoomLevels[currentZoomIndex] || zoomLevels[4];
+            const resolvedLoad = resolveZoomForPxPerDay(currentPxPerDay);
+            currentZoomIndex = resolvedLoad.index;
+            currentPxPerDay = resolvedLoad.pxPerDay;
+            const currentLevel = resolvedLoad.level;
             gantt.config.scales = currentLevel.scales;
-            gantt.config.min_column_width = currentLevel.min_column_width;
+            gantt.config.min_column_width = resolvedLoad.colWidth;
             gantt.config.scale_height = currentLevel.scale_height;
             gantt.config.time_step = currentLevel.time_step || 60;
-            activeRowHeight = saved.activeRowHeight || currentLevel.row_height;
+            activeRowHeight = saved.activeRowHeight || computeRowHeightForPxPerDay(currentPxPerDay);
             gantt.config.row_height = activeRowHeight;
             document.documentElement.style.setProperty('--active-row-height', activeRowHeight + 'px');
             updateZoomLabel();
